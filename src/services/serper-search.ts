@@ -1,4 +1,4 @@
-import { AutoCastable, DownstreamServiceFailureError, Prop, RPC_CALL_ENVIRONMENT, } from 'civkit/civ-rpc';
+import { Coercible, DownstreamServiceFailureError, Prop, RPC_CALL_ENVIRONMENT, } from 'civkit/civ-rpc';
 import { singleton } from 'tsyringe';
 import { GlobalLogger } from './logger';
 import { AsyncLocalContext } from './async-context';
@@ -143,7 +143,7 @@ export class SerperSearchService extends AsyncService {
 
 }
 
-export class GoogleSearchExplicitOperatorsDto extends AutoCastable {
+export class GoogleSearchExplicitOperatorsDto extends Coercible {
     @Prop({
         arrayOf: String,
         desc: `Returns web pages with a specific file extension. Example: to find the Honda GX120 Owner’s manual in PDF, type “Honda GX120 ownners manual ext:pdf”.`

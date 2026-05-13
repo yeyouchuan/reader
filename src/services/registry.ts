@@ -10,6 +10,7 @@ import { AsyncLocalContext } from './async-context';
 import { BlackHoleDetector } from './blackhole-detector';
 import { OutputServerEventStream } from '../lib/transform-server-event-stream';
 import { isReadable } from 'stream';
+import type { Context, Next } from 'koa';
 export { Context } from 'koa';
 
 export const InjectProperty = propertyInjectorFactory(container);
@@ -86,6 +87,7 @@ export class RPCRegistry extends KoaRPCRegistry {
             formLimit: this._BODY_PARSER_LIMIT,
         }),
         this.__multiParse.bind(this),
+        this.__commonKoaHeaders.bind(this),
         // this.__binaryParse.bind(this),
     ];
 
@@ -105,6 +107,12 @@ export class RPCRegistry extends KoaRPCRegistry {
     override async init() {
         await this.dependencyReady();
         this.emit('ready');
+    }
+
+    __commonKoaHeaders(ctx: Context, next: Next) {
+        ctx.set('Vary', '*');
+
+        return next();
     }
 
 }

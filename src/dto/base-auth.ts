@@ -2,7 +2,7 @@ import _ from 'lodash';
 import {
     Also, AuthenticationRequiredError,
     RPC_CALL_ENVIRONMENT,
-    AutoCastable,
+    Coercible,
 } from 'civkit/civ-rpc';
 import { htmlEscape } from 'civkit/escape';
 
@@ -34,7 +34,7 @@ import { isIPInNonPublicRange } from '../utils/ip';
         }
     }
 })
-export class BaseAuthDTO<U extends object = object> extends AutoCastable {
+export class BaseAuthDTO<U extends object = object> extends Coercible {
     uid?: string;
     bearerToken?: string;
     user?: U;

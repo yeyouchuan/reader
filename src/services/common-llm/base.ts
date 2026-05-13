@@ -1,6 +1,6 @@
 import {
-    ApplicationError, AutoCastable, DownstreamServiceFailureError,
-    OpenAPIManager, Prop, autoConstructor, isAutoCastableClass
+    ApplicationError, Coercible, DownstreamServiceFailureError,
+    OpenAPIManager, Prop, autoConstructor, isCoercibleClass
 } from 'civkit/civ-rpc';
 import { InputServerEventStream } from '../../lib/transform-server-event-stream';
 import { PassThrough, Readable, isReadable, once } from 'stream';
@@ -58,7 +58,7 @@ export function replaceNewlinesInJSONString(jsonString: string) {
 
 const JSONSchemaCache = new WeakMap<typeof LLMDto, any>();
 
-export class LLMDto extends AutoCastable {
+export class LLMDto extends Coercible {
     static fromFunctionCall(input: LLMFunctionCall): ReturnType<typeof autoConstructor> {
         return this.fromString(input.arguments);
     }
@@ -168,7 +168,7 @@ export abstract class AbstractLLM<T, C = unknown> extends AsyncService {
     static systemSupported?: boolean;
     static chatOptimized?: boolean;
     static windowSize?: number;
-    static modelOptionsType?: typeof AutoCastable;
+    static modelOptionsType?: typeof Coercible;
     static nSupported?: boolean;
     static functionCallingSupported?: boolean;
     static functionCalling?: 'native' | 'software' | 'none' | string;
@@ -853,7 +853,7 @@ ${enforce ? `At this time, you MUST invoke the tool named "${enforce}". This is 
         }
         let error: any;
         let final: any = undefined;
-        if (!isAutoCastableClass(expectOutputClass)) {
+        if (!isCoercibleClass(expectOutputClass)) {
             const chunks: string[] = [];
             peekStream.on('data', (sseMessage) => {
                 switch (sseMessage.event) {

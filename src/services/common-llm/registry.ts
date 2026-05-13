@@ -1,4 +1,4 @@
-import { ApplicationError, AssertionFailureError, isAutoCastableClass } from 'civkit/civ-rpc';
+import { ApplicationError, AssertionFailureError, isCoercibleClass } from 'civkit/civ-rpc';
 
 import { container, injectable, singleton } from 'tsyringe';
 import { readdirSync } from 'fs';
@@ -363,7 +363,7 @@ export class LLMManager extends AsyncService {
         }
 
         const modelOutputDto = profile.modelOutputDto;
-        if (isAutoCastableClass(modelOutputDto) || isScalarLike(modelOutputDto)
+        if (isCoercibleClass(modelOutputDto) || isScalarLike(modelOutputDto)
         ) {
             const execModelOptions = {
                 system: systemPrompt,
@@ -465,7 +465,7 @@ export class LLMManager extends AsyncService {
         }
 
         const modelOutputDto = profile.modelOutputDto;
-        if (isAutoCastableClass(modelOutputDto) || isScalarLike(modelOutputDto)
+        if (isCoercibleClass(modelOutputDto) || isScalarLike(modelOutputDto)
         ) {
             const execModelOptions = {
                 system: systemPrompt,

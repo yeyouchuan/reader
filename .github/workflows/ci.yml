@@ -1,0 +1,24 @@
+run-name: CI (tests)
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  push:
+    branches-ignore:
+      - main
+      - ops
+      - ci-debug
+      - dev
+    paths-ignore:
+      - '**.md'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/_test.yml
+    permissions:
+      contents: read
+    secrets: inherit

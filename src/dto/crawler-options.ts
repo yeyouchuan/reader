@@ -1,4 +1,4 @@
-import { Also, AutoCastable, ParamValidationError, Prop, RPC_CALL_ENVIRONMENT } from 'civkit/civ-rpc';
+import { Also, Coercible, ParamValidationError, Prop, RPC_CALL_ENVIRONMENT } from 'civkit/civ-rpc';
 import { FancyFile } from 'civkit/fancy-file';
 import { Cookie, parseString as parseSetCookieString } from 'set-cookie-parser';
 import { Context } from '../services/registry';
@@ -59,7 +59,7 @@ const LINK_RETENTION_MODE_VALUES = new Set<string>(LINK_RETENTION_MODES);
 export const BASE_URL_MODES = ['initial', 'final'] as const;
 const BASE_URL_MODE_VALUES = new Set<string>(BASE_URL_MODES);
 
-class Viewport extends AutoCastable {
+class Viewport extends Coercible {
     @Prop({
         default: 1280
     })
@@ -256,6 +256,11 @@ class Viewport extends AutoCastable {
                     in: 'header',
                     schema: { type: 'string' }
                 },
+                'X-Assert-Status-Code': {
+                    description: 'Assert the HTTP status code of the crawled page. If the actual status code does not match the asserted one, the request is rejected with 422 Unprocessable Entity.',
+                    in: 'header',
+                    schema: { type: 'string' }
+                },
                 'X-Respond-Timing': {
                     description: `Explicitly specify the respond timing. One of the following:\n\n` +
                         `- html: directly return unrendered HTML\n` +
@@ -322,11 +327,17 @@ class Viewport extends AutoCastable {
                     in: 'header',
                     schema: { type: 'string' }
                 },
+                'X-Page': {
+                    description: `Steer which page to return for uploaded files (PDF, DOC, XLS, PPT, etc.).\n\n` +
+                        `1-indexed; ignored when no file/PDF is uploaded.`,
+                    in: 'header',
+                    schema: { type: 'string' }
+                },
             }
         }
     }
 })
-export class CrawlerOptions extends AutoCastable {
+export class CrawlerOptions extends Coercible {
     @Prop()
     url?: string;
 
@@ -350,6 +361,12 @@ export class CrawlerOptions extends AutoCastable {
         type: [FancyFile, String]
     })
     file?: FancyFile | string;
+
+    @Prop({
+        desc: 'Steer which page to return for uploaded files (1-indexed). Ignored when no file/PDF is uploaded.',
+        validate: (v: number) => Number.isInteger(v) && v >= 1,
+    })
+    page?: number;
 
     @Prop({
         default: CONTENT_FORMAT.CONTENT,
@@ -422,7 +439,7 @@ export class CrawlerOptions extends AutoCastable {
     withShadowDom!: boolean;
 
     @Prop({
-        arrayOf: String,
+        arrayOf: [Object, String],
     })
     setCookies?: Cookie[];
 
@@ -435,7 +452,9 @@ export class CrawlerOptions extends AutoCastable {
     @Prop()
     userAgent?: string;
 
-    @Prop()
+    @Prop({
+        type: [ENGINE_TYPE, String],
+    })
     engine?: string;
 
     @Prop({
@@ -463,6 +482,9 @@ export class CrawlerOptions extends AutoCastable {
 
     @Prop()
     tokenBudget?: number;
+
+    @Prop()
+    assertStatusCode?: number;
 
     @Prop()
     viewport?: Viewport;
@@ -665,6 +687,9 @@ export class CrawlerOptions extends AutoCastable {
         const maxTokens = ctx?.get('x-max-tokens');
         instance.maxTokens ??= parseInt(maxTokens || '') || undefined;
 
+        const assertStatusCode = ctx?.get('x-assert-status-code');
+        instance.assertStatusCode ??= parseInt(assertStatusCode || '') || undefined;
+
         const markdownChunking = ctx?.get('x-markdown-chunking');
         instance.markdownChunking ??= markdownChunking || undefined;
 
@@ -679,6 +704,14 @@ export class CrawlerOptions extends AutoCastable {
         const respondTiming = ctx?.get('x-respond-timing');
         if (respondTiming) {
             instance.respondTiming ??= respondTiming as RESPOND_TIMING;
+        }
+
+        const pageHeader = ctx?.get('x-page');
+        if (pageHeader) {
+            const parsedPage = parseInt(pageHeader, 10);
+            if (Number.isInteger(parsedPage) && parsedPage >= 1) {
+                instance.page ??= parsedPage;
+            }
         }
 
         if (instance.cacheTolerance) {

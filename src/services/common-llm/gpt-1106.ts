@@ -1,4 +1,4 @@
-import { DownstreamServiceFailureError, isAutoCastableClass } from 'civkit/civ-rpc';
+import { DownstreamServiceFailureError, isCoercibleClass } from 'civkit/civ-rpc';
 import _ from "lodash";
 import { injectable } from "tsyringe";
 
@@ -84,7 +84,7 @@ export class ChatGPT1106 extends ChatGPT0613 {
                 )
             ));
         }
-        const expectedObjectLike = isAutoCastableClass(expectOutputClass);
+        const expectedObjectLike = isCoercibleClass(expectOutputClass);
         let lastError = '';
         let triesLeft = execOpts?.maxTry || 3;
         let trick: undefined | 'jsonMode' = expectedObjectLike ? 'jsonMode' : undefined;

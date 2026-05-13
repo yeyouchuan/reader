@@ -1,4 +1,4 @@
-import { MathMLToLaTeX } from 'mathml-to-latex';
+import { MathMLToLaTeX } from '@nomagick/mathml-to-latex';
 
 export interface MarkifyOptions {
     headingStyle?: 'atx' | 'setext';
@@ -585,7 +585,7 @@ export class MarkifyService {
         this.tableStack = this.tableStack.slice(tableIndex + 1);
         const items: string[] = [];
         if (!markdown.startsWith('\n')) {
-            items.push('\n');
+            items.unshift('\n');
         }
         items.push(markdown);
         if (!markdown.endsWith('\n')) {
@@ -595,6 +595,10 @@ export class MarkifyService {
     }
 
     protected processThead(element: Element): string {
+        if (element.previousSibling && element.previousSibling.textContent) {
+            return '\n' + this.processChildren(element);
+        }
+
         return this.processChildren(element);
     }
 
@@ -778,11 +782,16 @@ export class MarkifyService {
     }
 
     protected processMath(element: Element): string {
+        const altText = element.getAttribute('alttext');
+        if (altText) {
+            return altText;
+        }
+
         try {
             const latex = MathMLToLaTeX.convert(element.outerHTML);
             if (!latex.trim()) return '';
             // Parent is p and no siblings, then is block. Otherwise inline.
-            if (element.parentElement?.tagName.toLowerCase() === 'p' && element.parentElement.childNodes.length === 1) {
+            if (element.getAttribute('display') === 'block' || (element.parentElement?.tagName.toLowerCase() === 'p' && element.parentElement.childNodes.length === 1)) {
                 return `\n\n$$\n${latex.trim()}\n$$\n\n`;
             }
 

@@ -18,7 +18,7 @@ import { GlobalLogger } from '../services/logger';
 import { AsyncLocalContext } from '../services/async-context';
 import finalizer, { Finalizer } from '../services/finalizer';
 import { SerpHost } from '../api/serp';
-import koaCompress from 'koa-compress';
+import koaCompress from '../lib/koa-compress';
 
 @singleton()
 export class SERPStandAloneServer extends KoaServer {

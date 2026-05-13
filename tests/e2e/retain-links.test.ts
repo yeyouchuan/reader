@@ -5,7 +5,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { crawl, crawlWithHeaders } from '../helpers/client';
+import { crawl, crawlWithHeaders, getContent } from '../helpers/client';
 
 describe('retainLinks: all (default)', () => {
     it('keeps markdown link syntax in content', async () => {
@@ -18,6 +18,18 @@ describe('retainLinks: all (default)', () => {
         const res = await crawl({ retainLinks: 'all', respondWith: 'markdown' });
         const content: string = res.body.data.content;
         assert.match(content, /example\.com\/crawling|example\.org\/robots/);
+    });
+
+    it('renders crawling link with exact text and href', async () => {
+        const content = getContent(await crawl({ retainLinks: 'all', respondWith: 'markdown' }));
+        // fixture: <a href="https://example.com/crawling">link to crawling docs</a>
+        assert.match(content, /\[link to crawling docs\]\(https:\/\/example\.com\/crawling\)/);
+    });
+
+    it('renders robots.txt link with exact text and href', async () => {
+        const content = getContent(await crawl({ retainLinks: 'all', respondWith: 'markdown' }));
+        // fixture: <a href="https://example.org/robots">link about robots.txt</a>
+        assert.match(content, /\[link about robots\.txt\]\(https:\/\/example\.org\/robots\)/);
     });
 });
 
@@ -42,6 +54,14 @@ describe('retainLinks: text', () => {
         const content: string = res.body.data.content;
         assert.doesNotMatch(content, /(?<!!)\[.*?\]\(https?:\/\//);
     });
+
+    it('preserves anchor text but strips the href', async () => {
+        const content = getContent(await crawl({ retainLinks: 'text', respondWith: 'markdown' }));
+        // Text should appear
+        assert.ok(content.includes('link to crawling docs'), 'Anchor text missing');
+        // But not as a markdown link with href
+        assert.doesNotMatch(content, /\[link to crawling docs\]\(https/);
+    });
 });
 
 describe('retainLinks: gpt-oss', () => {
@@ -60,6 +80,15 @@ describe('retainLinks: gpt-oss', () => {
     it('populates the links summary automatically', async () => {
         const res = await crawl({ retainLinks: 'gpt-oss', respondWith: 'markdown' });
         assert.notStrictEqual(res.body.data.links, undefined);
+    });
+
+    it('links summary contains the crawling docs URL', async () => {
+        const res = await crawl({ retainLinks: 'gpt-oss', respondWith: 'markdown' });
+        const hrefs = Object.values(res.body.data.links as Record<string, string>);
+        assert.ok(
+            hrefs.some((h) => h === 'https://example.com/crawling'),
+            `Expected https://example.com/crawling in gpt-oss links summary: ${hrefs.join(', ')}`,
+        );
     });
 });
 

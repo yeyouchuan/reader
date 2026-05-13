@@ -1,7 +1,7 @@
 import { container, singleton } from 'tsyringe';
 import fsp from 'fs/promises';
 import { CityResponse, Reader } from 'maxmind';
-import { AutoCastable, Prop } from 'civkit/civ-rpc';
+import { Coercible, Prop } from 'civkit/coercible';
 import { GlobalLogger } from './logger';
 import path from 'path';
 import { Threaded } from './threaded';
@@ -19,7 +19,7 @@ export enum GEOIP_SUPPORTED_LANGUAGES {
     RU = 'ru',
 }
 
-export class GeoIPInfo extends AutoCastable {
+export class GeoIPInfo extends Coercible {
     @Prop()
     code?: string;
 
@@ -32,7 +32,7 @@ export class GeoIPCountryInfo extends GeoIPInfo {
     eu?: boolean;
 }
 
-export class GeoIPCityResponse extends AutoCastable {
+export class GeoIPCityResponse extends Coercible {
     @Prop()
     continent?: GeoIPInfo;
 

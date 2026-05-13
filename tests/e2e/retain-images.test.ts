@@ -5,7 +5,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { crawl, crawlWithHeaders } from '../helpers/client';
+import { crawl, crawlWithHeaders, getContent } from '../helpers/client';
 
 describe('retainImages: all (default)', () => {
     it('includes markdown image syntax in content', async () => {
@@ -19,6 +19,21 @@ describe('retainImages: all (default)', () => {
         assert.match(res.body.data.content, /spider\.png/);
         assert.match(res.body.data.content, /network\.jpg/);
     });
+
+    it('renders spider image with exact alt text and URL', async () => {
+        const content = getContent(await crawl({ retainImages: 'all', respondWith: 'markdown' }));
+        assert.match(content, /!\[.*?A spider crawling the web\]\(https:\/\/example\.com\/spider\.png\)/);
+    });
+
+    it('renders network image with exact alt text and URL', async () => {
+        const content = getContent(await crawl({ retainImages: 'all', respondWith: 'markdown' }));
+        assert.match(content, /!\[.*?Network diagram\]\(https:\/\/example\.com\/network\.jpg\)/);
+    });
+
+    it('includes the no-alt image with its URL', async () => {
+        const content = getContent(await crawl({ retainImages: 'all', respondWith: 'markdown' }));
+        assert.match(content, /!\[.*?\]\(https:\/\/example\.com\/noalt\.png\)/);
+    });
 });
 
 describe('retainImages: none', () => {
@@ -28,6 +43,11 @@ describe('retainImages: none', () => {
         assert.doesNotMatch(res.body.data.content, /\!\[/);
         assert.doesNotMatch(res.body.data.content, /spider\.png/);
         assert.doesNotMatch(res.body.data.content, /network\.jpg/);
+    });
+
+    it('also removes the no-alt image', async () => {
+        const content = getContent(await crawl({ retainImages: 'none', respondWith: 'markdown' }));
+        assert.doesNotMatch(content, /noalt\.png/);
     });
 
     it('still returns normal text content', async () => {
@@ -41,6 +61,16 @@ describe('retainImages: alt', () => {
         const res = await crawl({ retainImages: 'alt', respondWith: 'markdown' });
         assert.strictEqual(res.status, 200);
         assert.match(res.body.data.content, /\(Image \d+:.*spider crawling|Image \d+:.*Network diagram/i);
+    });
+
+    it('uses the exact spider alt text in the placeholder', async () => {
+        const content = getContent(await crawl({ retainImages: 'alt', respondWith: 'markdown' }));
+        assert.match(content, /\(Image \d+: A spider crawling the web\)/);
+    });
+
+    it('uses the exact network alt text in the placeholder', async () => {
+        const content = getContent(await crawl({ retainImages: 'alt', respondWith: 'markdown' }));
+        assert.match(content, /\(Image \d+: Network diagram\)/);
     });
 
     it('omits images without alt text', async () => {

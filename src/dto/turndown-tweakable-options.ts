@@ -1,9 +1,9 @@
-import { AutoCastable, Prop } from 'civkit/civ-rpc';
+import { Coercible, Prop } from 'civkit/coercible';
 import {Context} from '../services/registry';
 import _ from 'lodash';
 
 
-export class TurnDownTweakableOptions extends AutoCastable {
+export class TurnDownTweakableOptions extends Coercible {
     @Prop({
         desc: 'Turndown options > headingStyle',
         type: new Set(['setext', 'atx']),

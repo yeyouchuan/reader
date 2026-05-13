@@ -3,6 +3,7 @@ import {
     assignTransferProtocolMeta, RPCHost, RPCReflection, AssertionFailureError, assignMeta, RawString,
     DownstreamServiceFailureError,
     AuthenticationRequiredError,
+    ArrayOf,
 } from 'civkit/civ-rpc';
 import { marshalErrorLike } from 'civkit/lang';
 import { objHashMd5B64Of } from 'civkit/hash';
@@ -10,7 +11,7 @@ import _ from 'lodash';
 
 import { CrawlerHost, ExtraScrappingOptions } from './crawler';
 import { CrawlerOptions, RESPOND_TIMING } from '../dto/crawler-options';
-import { SnapshotFormatter, FormattedPage as RealFormattedPage } from '../services/snapshot-formatter';
+import { SnapshotFormatter, FormattedPage as RealFormattedPage, FormattedPageDto } from '../services/snapshot-formatter';
 import { GoogleSearchExplicitOperatorsDto } from '../services/serper-search';
 
 import { GlobalLogger } from '../services/logger';
@@ -90,7 +91,7 @@ export class SearcherHost extends RPCHost {
             }
         },
         tags: ['search'],
-        returnType: [String, OutputServerEventStream],
+        returnType: [RawString, ArrayOf(FormattedPageDto), OutputServerEventStream],
     })
     @Method({
         ext: {
@@ -100,7 +101,7 @@ export class SearcherHost extends RPCHost {
             }
         },
         tags: ['search'],
-        returnType: [String, OutputServerEventStream, RawString],
+        returnType: [RawString, ArrayOf(FormattedPageDto), OutputServerEventStream],
     })
     async search(
         @RPCReflect() rpcReflect: RPCReflection,

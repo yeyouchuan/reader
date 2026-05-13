@@ -61,6 +61,7 @@ import { HashManager } from 'civkit/hash';
 import { detectBuff, extOfMime } from 'civkit/mime';
 import { STATUS_CODES } from 'http';
 import { fileURLToPath } from 'url';
+import { BogoSitesControl } from '../services/bogo-sites';
 
 
 export const sha256Hasher = new HashManager('sha256', 'hex');
@@ -123,6 +124,7 @@ export class CrawlerHost extends RPCHost {
         protected altTextService: AltTextService,
         protected storageLayer: StorageLayer,
         protected binaryExtractorService: BinaryExtractorService,
+        protected bogoSitesControl: BogoSitesControl,
     ) {
         super(...arguments);
 
@@ -272,7 +274,7 @@ export class CrawlerHost extends RPCHost {
             }
         },
         tags: ['crawl'],
-        returnType: [String, OutputServerEventStream],
+        returnType: [RawString, FormattedPageDto, OutputServerEventStream],
     })
     @Method({
         description: 'Crawl any url into markdown',
@@ -283,7 +285,7 @@ export class CrawlerHost extends RPCHost {
             }
         },
         tags: ['crawl'],
-        returnType: [String, OutputServerEventStream, RawString],
+        returnType: [RawString, FormattedPageDto, OutputServerEventStream],
     })
     async crawl(
         @RPCReflect() rpcReflect: RPCReflection,
@@ -592,7 +594,9 @@ export class CrawlerHost extends RPCHost {
         ) {
             const identifier = binaryFile instanceof FancyFile ? (await binaryFile.sha256Sum) : randomUUID();
             url = `blob:${identifier}`;
-            if (crawlerOptions.url && URL.canParse(crawlerOptions.url)) {
+            if (crawlerOptions.page && crawlerOptions.page >= 1) {
+                url += `#${crawlerOptions.page}`;
+            } else if (crawlerOptions.url && URL.canParse(crawlerOptions.url)) {
                 const nominalUrl = new URL(crawlerOptions.url);
                 if (nominalUrl.hash) {
                     url += nominalUrl.hash;
@@ -843,6 +847,9 @@ export class CrawlerHost extends RPCHost {
             if (!finalAutoSnapshot?.html) {
                 throw new AssertionFailureError(`Unexpected non HTML content for ReaderLM: ${urlToCrawl}`);
             }
+            if (finalAutoSnapshot?.status && crawlerOpts?.assertStatusCode && crawlerOpts.assertStatusCode !== finalAutoSnapshot.status) {
+                throw new AssertionFailureError(`Expected status code ${crawlerOpts.assertStatusCode} but got ${finalAutoSnapshot.status}`);
+            }
 
             if (crawlerOpts?.instruction || crawlerOpts?.jsonSchema) {
                 const jsonSchema = crawlerOpts.jsonSchema ? JSON.stringify(crawlerOpts.jsonSchema, undefined, 2) : undefined;
@@ -877,6 +884,9 @@ export class CrawlerHost extends RPCHost {
                         badBlob = true;
                         this.logger.warn(`Failed to crawl blob URL ${snapshot.blobs[0].url} referenced from ${urlToCrawl}`, { err });
                     }
+                }
+                if (snapshot?.status && crawlerOpts?.assertStatusCode && crawlerOpts.assertStatusCode !== snapshot.status) {
+                    throw new AssertionFailureError(`Expected status code ${crawlerOpts.assertStatusCode} but got ${snapshot.status}`);
                 }
                 yield snapshot;
             }
@@ -990,6 +1000,38 @@ export class CrawlerHost extends RPCHost {
             throw new OperationNotAllowedError(`Consecutive error detected on URL ${urlToCrawl} for too many times${consecutiveError.lastError ? ` (${consecutiveError.lastError})` : ''}, please retry after ${consecutiveError.expireAt?.toISOString()}.`);
         }
 
+        const bogoResp = await this.bogoSitesControl.attempt(urlToCrawl.href);
+        if (bogoResp?.ok) {
+            blob = await bogoResp.data as Blob;
+
+            const snapshot = await this.createSnapshotFromBlob(crawlOpts || {}, urlToCrawl, blob, blob.type);
+            if (crawlerOpts?.isCacheQueryApplicable() && !crawlOpts?.favorScreenshot) {
+                this.emit('index-snapshot', urlToCrawl, snapshot, crawlOpts, 'bogo');
+                yield this.jsdomControl.narrowSnapshot(snapshot, crawlOpts);
+                return;
+            }
+
+            // yield this.jsdomControl.narrowSnapshot(snapshot, crawlOpts);
+
+            if (crawlOpts) {
+                crawlOpts.sideLoad ??= {
+                    impersonate: {},
+                    proxyOrigin: {},
+                };
+                const headers: { [key: string]: string; } = {};
+                bogoResp.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                crawlOpts.sideLoad.impersonate[urlToCrawl.href] = {
+                    status: bogoResp.status,
+                    contentType: blob.type,
+                    headers,
+                    body: blob,
+                };
+            }
+
+        }
+
         if (
             crawlOpts?.engine === ENGINE_TYPE.CURL ||
             // deprecated name
@@ -1068,7 +1110,7 @@ export class CrawlerHost extends RPCHost {
         }
 
         let backUpSideLoadSnapshot;
-        if (crawlOpts?.engine !== ENGINE_TYPE.BROWSER && !this.knownUrlThatSideLoadingWouldCrashTheBrowser(urlToCrawl)) {
+        if (crawlOpts?.engine !== ENGINE_TYPE.BROWSER && !this.knownUrlThatSideLoadingWouldCrashTheBrowser(urlToCrawl) && _.isEmpty(crawlOpts?.sideLoad?.impersonate)) {
             const sideLoadSnapshotPermitted = crawlerOpts?.browserIsNotRequired() &&
                 [RESPOND_TIMING.HTML, RESPOND_TIMING.VISIBLE_CONTENT].includes(crawlerOpts.presumedRespondTiming);
             try {

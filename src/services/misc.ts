@@ -12,6 +12,8 @@ import _ from 'lodash';
 
 const normalizeUrl = require('@esm2cjs/normalize-url').default;
 
+const privateIpNotAcceptable = Boolean(process.env['NODE_ENV']?.toLowerCase()?.includes('prod') && process.env['GCLOUD_PROJECT']);
+
 @singleton()
 export class MiscService extends AsyncService {
 
@@ -66,6 +68,7 @@ export class MiscService extends AsyncService {
             ips.push(normalizedHostname);
         }
         if (
+            privateIpNotAcceptable &&
             (result.hostname === 'localhost') ||
             (isIp && isIPInNonPublicRange(normalizedHostname))
         ) {
@@ -88,7 +91,7 @@ export class MiscService extends AsyncService {
             });
             if (resolved) {
                 for (const x of resolved) {
-                    if (isIPInNonPublicRange(x.address)) {
+                    if (privateIpNotAcceptable && isIPInNonPublicRange(x.address)) {
                         this.logger.warn(`Suspicious action: Domain resolved to non-public IP: ${result.hostname} => ${x.address}`, { href: result.href, ip: x.address });
                         throw new SecurityCompromiseError({
                             message: `Suspicious action: Domain resolved to non-public IP: ${x.address}`,

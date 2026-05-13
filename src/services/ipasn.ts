@@ -1,7 +1,7 @@
 import { container, singleton } from 'tsyringe';
 import fsp from 'fs/promises';
 import { AsnResponse, Reader } from 'maxmind';
-import { AutoCastable, Prop } from 'civkit/civ-rpc';
+import { Coercible, Prop } from 'civkit/coercible';
 import { GlobalLogger } from './logger';
 import path from 'path';
 import { Threaded } from './threaded';
@@ -9,7 +9,7 @@ import { AsyncService } from 'civkit/async-service';
 import { runOnce } from 'civkit/decorators';
 
 
-export class ASNInfo extends AutoCastable {
+export class ASNInfo extends Coercible {
     @Prop()
     asn?: number;
 

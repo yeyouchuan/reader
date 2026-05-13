@@ -673,14 +673,18 @@ export class PuppeteerControl extends AsyncService {
                 this.browser.process()?.kill('SIGKILL');
             }
         }
+        const args = [
+            '--disable-dev-shm-usage',
+            '--disable-blink-features=AutomationControlled'
+        ];
+        if (process.env.NODE_ENV === undefined || process.env.NODE_ENV === 'test') {
+            args.push('--no-sandbox', '--disable-setuid-sandbox');
+        }
         this.browser = await puppeteer.launch({
             timeout: 10_000,
             headless: !Boolean(process.env.DEBUG_BROWSER),
             executablePath: process.env.OVERRIDE_CHROME_EXECUTABLE_PATH,
-            args: [
-                '--disable-dev-shm-usage',
-                '--disable-blink-features=AutomationControlled'
-            ]
+            args,
         }).catch((err: any) => {
             this.logger.error(`Failed to launch browser. This is fatal.`, { err });
             process.nextTick(() => {

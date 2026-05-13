@@ -33,6 +33,7 @@ RUN rm -rf ~/.config/chromium && mkdir -p ~/.config/chromium
 RUN NODE_COMPILE_CACHE=node_modules npm run dry-run
 ENV NODE_COMPILE_CACHE=node_modules
 ENV PORT=8080
-EXPOSE 3000 3001 8080 8081
+
+EXPOSE 8080 8081
 ENTRYPOINT ["node"]
 CMD [ "build/stand-alone/crawl.js" ]

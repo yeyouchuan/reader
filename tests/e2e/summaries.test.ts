@@ -30,6 +30,30 @@ describe('withLinksSummary: true', () => {
         assert.ok(hasExampleLink);
     });
 
+    it('contains the crawling docs URL from the fixture', async () => {
+        const res = await crawl({ withLinksSummary: true, respondWith: 'markdown' });
+        const hrefs = Object.values(res.body.data.links as Record<string, string>);
+        assert.ok(
+            hrefs.some((h) => h === 'https://example.com/crawling'),
+            `Expected https://example.com/crawling among: ${hrefs.join(', ')}`,
+        );
+    });
+
+    it('contains the robots.txt URL from the fixture', async () => {
+        const res = await crawl({ withLinksSummary: true, respondWith: 'markdown' });
+        const hrefs = Object.values(res.body.data.links as Record<string, string>);
+        assert.ok(
+            hrefs.some((h) => h === 'https://example.org/robots'),
+            `Expected https://example.org/robots among: ${hrefs.join(', ')}`,
+        );
+    });
+
+    it('all href values are absolute URLs', async () => {
+        const res = await crawl({ withLinksSummary: true, respondWith: 'markdown' });
+        const hrefs = Object.values(res.body.data.links as Record<string, string>);
+        assert.ok(hrefs.every((h) => h.startsWith('http')), `Non-absolute href found: ${hrefs.find((h) => !h.startsWith('http'))}`);
+    });
+
     it('excludes javascript: and file: hrefs', async () => {
         const res = await crawl({ withLinksSummary: true, respondWith: 'markdown' });
         const links: Record<string, string> = res.body.data.links;
@@ -78,6 +102,24 @@ describe('withImagesSummary: true', () => {
         const allSrcs = Object.values(images);
         const hasExampleImg = allSrcs.some((src) => src.includes('example.com'));
         assert.ok(hasExampleImg);
+    });
+
+    it('contains the spider image src from the fixture', async () => {
+        const res = await crawl({ withImagesSummary: true, respondWith: 'markdown' });
+        const srcs = Object.values(res.body.data.images as Record<string, string>);
+        assert.ok(
+            srcs.some((s) => s === 'https://example.com/spider.png'),
+            `Expected https://example.com/spider.png among: ${srcs.join(', ')}`,
+        );
+    });
+
+    it('uses the spider alt text as the key for that image', async () => {
+        const res = await crawl({ withImagesSummary: true, respondWith: 'markdown' });
+        const keys = Object.keys(res.body.data.images as Record<string, string>);
+        assert.ok(
+            keys.some((k) => k.includes('A spider crawling the web')),
+            `Expected 'A spider crawling the web' as a key among: ${keys.join(', ')}`,
+        );
     });
 
     it('image keys contain alt text when available', async () => {

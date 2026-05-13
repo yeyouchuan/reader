@@ -1,6 +1,6 @@
 import { AsyncService } from 'civkit/async-service';
 import { singleton } from 'tsyringe';
-import { ConsecutiveError, Crawled, DomainBlockade, ImgAlt, IndexedPage, SERPResult } from './models';
+import { ASNBlockade, ConsecutiveError, Crawled, DomainBlockade, ImgAlt, IndexedPage, SERPResult } from './models';
 import { Context } from '../services/registry';
 import { RPCReflection } from 'civkit/civ-rpc';
 // import { JinaEmbeddingsAuthDTO } from '../dto/jina-embeddings-auth';
@@ -31,6 +31,14 @@ export class StorageLayer extends AsyncService {
     }
 
     async storeDomainBlockade(_draft: DomainBlockade): Promise<unknown> {
+        return undefined;
+    }
+
+    async findASNBlockade(_asn: number): Promise<ASNBlockade | undefined> {
+        return undefined;
+    }
+
+    async storeASNBlockade(_draft: ASNBlockade): Promise<unknown> {
         return undefined;
     }
 

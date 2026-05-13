@@ -1,22 +1,4 @@
 services:
-  mongo:
-    build:
-      context: ./.docker/mongo
-    restart: always
-    ports:
-      - 27017:27017
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: localdev
-      MONGO_INITDB_ROOT_PASSWORD: localdev123
-      MONGO_INITDB_DATABASE: dev
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      default:
-        aliases:
-          - mongo-replset-1.dev.jina.ai
-          - mongo.dev.jina.ai
-
   minio:
     image: minio/minio
     hostname: minio
@@ -47,4 +29,3 @@ services:
 
 volumes:
   minio-data:
-  mongo-data:

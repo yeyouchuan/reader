@@ -1,4 +1,4 @@
-import { AutoCastable, Prop } from 'civkit/civ-rpc';
+import { Coercible, Prop } from 'civkit/coercible';
 import { ReplicateHTTP } from '../../3rd-party/replicate';
 import _ from 'lodash';
 import { injectable } from 'tsyringe';
@@ -7,7 +7,7 @@ import { AbstractImageInterrogationModel, ImageInterrogationOptions } from './ba
 import { EnvConfig } from '../envconfig';
 import { GlobalLogger } from '../logger';
 
-export class ReplicateInstructBlipVicuna13bModelOptions extends AutoCastable {
+export class ReplicateInstructBlipVicuna13bModelOptions extends Coercible {
 
     @Prop({
         desc: `Image prompt to send to the model.`,

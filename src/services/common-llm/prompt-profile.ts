@@ -1,4 +1,4 @@
-import { AUTOCASTABLE_OPTIONS_SYMBOL, AutoCastable, inputSingle } from 'civkit/civ-rpc';
+import { COERCIBLE_OPTIONS_SYMBOL, Coercible, inputSingle } from 'civkit/coercible';
 import { AbstractLLM, LLMDto, LLMModelOptions } from './base';
 import { Readable } from 'stream';
 import { FunctionCallingAwareLLMMessage, FunctionCallingAwareLLMModelOptions, LLMFunctionCallRequest } from './misc';
@@ -12,7 +12,7 @@ export interface PromptProfileRuntimeMetadata {
     iterations: { input: FunctionCallingAwareLLMModelOptions<unknown>, output?: Readable | string | LLMDto | LLMFunctionCallRequest; }[];
 }
 
-export abstract class PromptProfile<T = unknown> extends AutoCastable {
+export abstract class PromptProfile<T = unknown> extends Coercible {
 
     abstract modelOutput?: LLMDto | string | string[] | number | boolean | Readable | Readable[];
     runtime?: PromptProfileRuntimeMetadata;
@@ -32,8 +32,8 @@ export abstract class PromptProfile<T = unknown> extends AutoCastable {
     abstract renderPrompt(): string | FunctionCallingAwareLLMMessage[] | Promise<string | FunctionCallingAwareLLMMessage[]>;
 
     get modelOutputDto() {
-        const theConstructor = this.constructor as typeof AutoCastable;
-        const opts = theConstructor[AUTOCASTABLE_OPTIONS_SYMBOL];
+        const theConstructor = this.constructor as typeof Coercible;
+        const opts = theConstructor[COERCIBLE_OPTIONS_SYMBOL];
 
         const expectedType = opts?.['modelOutput']?.type;
 
@@ -49,8 +49,8 @@ export abstract class PromptProfile<T = unknown> extends AutoCastable {
     }
 
     async acceptModelOutput(parsed: typeof this.modelOutput, raw: string): Promise<boolean> {
-        const theConstructor = this.constructor as typeof AutoCastable;
-        const opts = theConstructor[AUTOCASTABLE_OPTIONS_SYMBOL];
+        const theConstructor = this.constructor as typeof Coercible;
+        const opts = theConstructor[COERCIBLE_OPTIONS_SYMBOL];
 
         const propOpts = opts?.['modelOutput'];
         if (!propOpts) {

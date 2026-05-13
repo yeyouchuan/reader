@@ -12,8 +12,6 @@ import { isMainThread } from 'worker_threads';
 import { EnvConfig } from './envconfig';
 import { Finalizer } from './finalizer';
 
-import '../config';
-
 @singleton()
 export class ThreadedServiceRegistry extends AbstractThreadedServiceRegistry {
     container = container;
@@ -85,3 +83,7 @@ export class ThreadedServiceRegistry extends AbstractThreadedServiceRegistry {
 const instance = container.resolve(ThreadedServiceRegistry);
 export default instance;
 export const { Method, Param, Ctx, RPCReflect, Threaded } = instance.decorators();
+
+if (!isMainThread) {
+    require('../config');
+}

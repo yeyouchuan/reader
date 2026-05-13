@@ -6,7 +6,7 @@ import _ from 'lodash';
 import { Writable } from 'stream';
 import { JSONAccumulation, JSONParserStream, JSONParserStreamOptions } from '../../lib/json-parse-stream';
 import { FancyFile } from 'civkit/fancy-file';
-import { AutoCastable, Prop } from 'civkit/civ-rpc';
+import { Coercible, Prop } from 'civkit/coercible';
 
 export type PromptChunk = string | URL | Buffer | File | object;
 
@@ -211,7 +211,7 @@ export class LLMPeakStream extends Writable {
     }
 }
 
-export class LLMFunctionCall extends AutoCastable {
+export class LLMFunctionCall extends Coercible {
 
     @Prop({
         desc: 'Call id',
@@ -236,7 +236,7 @@ export class LLMFunctionCall extends AutoCastable {
 
 }
 
-export class LLMFunctionCallRequest extends AutoCastable {
+export class LLMFunctionCallRequest extends Coercible {
 
     @Prop({
         default: 'LLMFunctionCallRequest'
@@ -257,7 +257,7 @@ export class LLMFunctionCallRequest extends AutoCastable {
 
 }
 
-export class LLMFunctionCallResponse extends AutoCastable {
+export class LLMFunctionCallResponse extends Coercible {
 
     @Prop({
         default: 'LLMFunctionCallResponse'

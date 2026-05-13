@@ -45,7 +45,7 @@ export class DefaultBucket extends AbstractObjectStorageService {
     }
 
     async putBuffer(path: string, buffer: Buffer, metadata?: Record<string, any>) {
-        const r = await this.minioClient.putObject(this.bucket, path, buffer, metadata);
+        const r = await this.minioClient.putObject(this.bucket, path, buffer, buffer.byteLength, metadata);
 
         return r;
     }
@@ -53,7 +53,7 @@ export class DefaultBucket extends AbstractObjectStorageService {
     async putBufferIfNotExist(path: string, buffer: Buffer, metadata?: Record<string, any>) {
         const s = await this.minioClient.statObject(this.bucket, path).catch(() => undefined);
         if (!s) {
-            const r = await this.minioClient.putObject(this.bucket, path, buffer, metadata);
+            const r = await this.minioClient.putObject(this.bucket, path, buffer, buffer.byteLength, metadata);
             return r;
         }
 

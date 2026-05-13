@@ -755,7 +755,7 @@ export class VertexGeminiHTTP extends GoogleGeminiHTTP {
         public project: string,
         public region: string = 'us-central1',
     ) {
-        super(apiKey, `https://${region}-aiplatform.googleapis.com/v1beta1/projects/${project}/locations/${region}/publishers/google`);
+        super(apiKey, `https://${region}-aiplatform.googleapis.com/v1/projects/${project}/locations/${region}/publishers/google`);
     }
 
     override get apiKey() {

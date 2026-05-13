@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe';
-import { ConsecutiveError, Crawled, DomainBlockade, ImgAlt, IndexedPage, SERPResult } from './models';
+import { ASNBlockade, ConsecutiveError, Crawled, DomainBlockade, ImgAlt, IndexedPage, SERPResult } from './models';
 import { Context } from '../services/registry';
 import { RPCReflection } from 'civkit/civ-rpc';
 import { HashManager } from 'civkit/hash';
@@ -77,6 +77,29 @@ export class BucketStorageLayer extends StorageLayer {
             contentType: 'application/json',
         });
 
+        return undefined;
+    }
+
+    override async findASNBlockade(asn: number): Promise<ASNBlockade | undefined> {
+        try {
+            const buff = await this.defaultBucket.readSingleFile(`asn-blockade/${asn}`);
+            const r = ASNBlockade.from(JSON.parse(buff.toString()));
+            if (r.expireAt && new Date(r.expireAt).valueOf() <= Date.now()) {
+                return undefined;
+            }
+            return r;
+        } catch (err) {
+            return undefined;
+        }
+    }
+
+    override async storeASNBlockade(draft: ASNBlockade): Promise<unknown> {
+        if (draft._id === undefined || draft._id === null) {
+            throw new Error('ASN is required when storing ASN blockade');
+        }
+        await this.defaultBucket.putBuffer(`asn-blockade/${draft._id}`, Buffer.from(JSON.stringify(draft)), {
+            contentType: 'application/json',
+        });
         return undefined;
     }
 

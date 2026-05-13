@@ -1,6 +1,6 @@
 import { Blob } from 'buffer';
 import { AsyncService } from 'civkit/async-service';
-import { ApplicationError, AutoCastable } from 'civkit/civ-rpc';
+import { ApplicationError, Coercible } from 'civkit/civ-rpc';
 import { HTTPService, HTTPServiceRequestOptions } from 'civkit/http';
 import { LoggerInterface } from 'civkit/logger';
 import { mimeOf } from 'civkit/mime';
@@ -25,7 +25,7 @@ export abstract class AbstractImageInterrogationModel<T = any, C = unknown, R = 
     static aliases?: string[];
     static description?: string;
 
-    static modelOptionsType?: typeof AutoCastable;
+    static modelOptionsType?: typeof Coercible;
 
     abstract clients: C[];
     abstract logger: LoggerInterface;

@@ -97,8 +97,11 @@ export class JSONParserStream extends Transform {
         i._syncBuff = [];
         i.pendingChunks.push(Buffer.from(input, 'utf-8'));
         i.resume();
-        i.routine();
-        i.finishLingeringStack();
+        i._flush((err) => {
+            if (err) {
+                throw err;
+            }
+        });
 
         return i._syncBuff;
     }
@@ -464,6 +467,7 @@ export class JSONParserStream extends Transform {
         }
 
         this.onUnexpectedToken();
+        this.forward();
     }
 
     protected onExpectString() {
@@ -488,7 +492,6 @@ export class JSONParserStream extends Transform {
                 this.forward();
                 return;
             }
-
             this.pX = this.pX.join('');
             this.push({ event: 'text', data: { value: this.pX } });
             this.push({
@@ -508,7 +511,7 @@ export class JSONParserStream extends Transform {
                 return;
             }
             this.onUnexpectedToken();
-
+            this.forward();
             return;
         }
 
@@ -576,14 +579,14 @@ export class JSONParserStream extends Transform {
             return;
         }
 
-        if (HEX_NUMBER_S.has(c) && this.cX.length < 1 + 4) {
+        if (HEX_NUMBER_S.has(c) && this.cX.length < (1 + 4)) {
             this.cX += c;
             this.forward();
+            return;
         }
 
-        if (this.cX.length === 1 + 4) {
+        if (this.cX.length === (1 + 4)) {
             this.pX = String.fromCharCode(parseInt(this.cX.slice(1), 16));
-            this.forward();
             this.popStack();
             return;
         }
@@ -593,7 +596,6 @@ export class JSONParserStream extends Transform {
         this.pX = this.cX;
         this.popStack();
         return;
-
     }
 
     protected onExpectNumber() {
@@ -865,6 +867,7 @@ export class JSONParserStream extends Transform {
                 }
 
                 this.onUnexpectedToken(`Expected property name or '}'`);
+                this.forward();
                 return;
             }
 
@@ -942,6 +945,7 @@ export class JSONParserStream extends Transform {
                 }
             }
         }
+        this.forward();
     }
 
     protected onExpectObjectKey() {
@@ -997,6 +1001,7 @@ export class JSONParserStream extends Transform {
             }
 
             this.onUnexpectedToken();
+            this.forward();
             return;
         }
 
@@ -1058,7 +1063,11 @@ export class JSONParserStream extends Transform {
         if (!this.stateStack.length) {
             return;
         }
-        this.onUnexpectedEnd();
+        if (this.stateStack[0]?.state !== PARSE_STATE.EXPECT_VALUE) {
+            this.onUnexpectedEnd();
+        } else if (this.stateStack[1] && this.stateStack[1].state !== PARSE_STATE.EXPECT_NUMBER) {
+            this.onUnexpectedEnd();
+        }
 
         let rtn: any = undefined;
         let lastState: PARSE_STATE | undefined = undefined;

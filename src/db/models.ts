@@ -1,11 +1,11 @@
-import { Also, AutoCastable, Prop } from 'civkit/civ-rpc';
+import { Also, Coercible, Prop } from 'civkit/coercible';
 import type { PageSnapshot } from '../services/puppeteer';
 import { UUID } from 'bson';
 
 @Also({
     dictOf: Object
 })
-export class ConsecutiveError extends AutoCastable {
+export class ConsecutiveError extends Coercible {
     @Prop({
         required: true,
     })
@@ -39,7 +39,7 @@ export class ConsecutiveError extends AutoCastable {
 @Also({
     dictOf: Object
 })
-export class Crawled extends AutoCastable {
+export class Crawled extends Coercible {
     @Prop({
         required: true
     })
@@ -89,7 +89,7 @@ export class Crawled extends AutoCastable {
 @Also({
     dictOf: Object
 })
-export class DomainBlockade extends AutoCastable {
+export class DomainBlockade extends Coercible {
     @Prop({
         defaultFactory: () => new UUID()
     })
@@ -118,7 +118,28 @@ export class DomainBlockade extends AutoCastable {
 @Also({
     dictOf: Object
 })
-export class ImgAlt extends AutoCastable {
+export class ASNBlockade extends Coercible {
+    @Prop({
+        required: true
+    })
+    _id!: number;
+
+    @Prop()
+    note?: string;
+
+    @Prop()
+    createdAt!: Date;
+
+    @Prop()
+    expireAt?: Date;
+
+    [k: string]: any;
+}
+
+@Also({
+    dictOf: Object
+})
+export class ImgAlt extends Coercible {
 
     @Prop({
         required: true,
@@ -157,7 +178,7 @@ export class ImgAlt extends AutoCastable {
 }
 
 
-export class IndexedPage extends AutoCastable {
+export class IndexedPage extends Coercible {
     @Prop({ required: true })
     _id!: string;
 
@@ -203,7 +224,7 @@ export class IndexedPage extends AutoCastable {
 @Also({
     dictOf: Object
 })
-export class PDFContent extends AutoCastable {
+export class PDFContent extends Coercible {
 
     @Prop({
         required: true
@@ -243,7 +264,7 @@ export class PDFContent extends AutoCastable {
 @Also({
     dictOf: Object
 })
-export class SERPResult extends AutoCastable {
+export class SERPResult extends Coercible {
     @Prop({
         defaultFactory: () => new UUID()
     })

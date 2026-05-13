@@ -29,6 +29,10 @@ export class BlackHoleDetector extends AsyncService {
 
     override async init() {
         await this.dependencyReady();
+        if (!process.env.GCLOUD_PROJECT) {
+            this.emit('ready');
+            return;
+        }
         this.logger.debug('BlackHoleDetector started');
         this.emit('ready');
     }

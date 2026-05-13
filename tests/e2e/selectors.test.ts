@@ -22,6 +22,18 @@ describe('targetSelector', () => {
         assert.doesNotMatch(content, /Copyright 2024/i);
     });
 
+    it('sidebar unique link is absent when targeting main-content', async () => {
+        const content: string = (await crawl({ targetSelector: '#main-content', respondWith: 'markdown' })).body.data.content;
+        // This href only exists in <aside class="sidebar">
+        assert.doesNotMatch(content, /example\.com\/related/);
+    });
+
+    it('footer privacy link is absent when targeting main-content', async () => {
+        const content: string = (await crawl({ targetSelector: '#main-content', respondWith: 'markdown' })).body.data.content;
+        // This link only exists in <footer>
+        assert.doesNotMatch(content, /\/privacy/);
+    });
+
     it('narrows to a specific section', async () => {
         const res = await crawl({ targetSelector: '.sidebar', respondWith: 'markdown' });
         assert.strictEqual(res.status, 200);
@@ -39,6 +51,12 @@ describe('removeSelector', () => {
         assert.doesNotMatch(content, /Buy our product/i);
     });
 
+    it('removes all text content inside the removed element', async () => {
+        const content: string = (await crawl({ removeSelector: '.ads', respondWith: 'markdown' })).body.data.content;
+        // The only text inside .ads is "Buy our product!" — verify complete removal
+        assert.doesNotMatch(content, /Buy our product!/i);
+    });
+
     it('keeps the rest of the page intact', async () => {
         const res = await crawl({ removeSelector: '.ads', respondWith: 'markdown' });
         const content: string = res.body.data.content;
@@ -52,6 +70,21 @@ describe('removeSelector', () => {
         assert.doesNotMatch(content, /Buy our product/i);
         assert.doesNotMatch(content, /Related articles sidebar/i);
         assert.match(content, /Web Crawling Guide/i);
+    });
+
+    it('removing nav, sidebar, footer, and ads leaves article body intact', async () => {
+        const content: string = (await crawl({
+            removeSelector: ['#site-nav', '.sidebar', 'footer', '.ads'],
+            respondWith: 'markdown',
+        })).body.data.content;
+        // Removed content should be absent
+        assert.doesNotMatch(content, /Related articles sidebar content/i);
+        assert.doesNotMatch(content, /Copyright 2024/);
+        assert.doesNotMatch(content, /Buy our product/i);
+        // Main article body should survive
+        assert.match(content, /Web Crawling Guide/);
+        assert.match(content, /The web is a graph, not a tree/);
+        assert.match(content, /fetching pages/i);
     });
 });
 

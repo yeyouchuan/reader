@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { container, singleton } from 'tsyringe';
 import { AsyncService } from 'civkit/async-service';
 import { HashManager } from 'civkit/hash';
-import { ArrayOf, AutoCastable, DictOf, Prop } from 'civkit/civ-rpc';
+import { ArrayOf, Coercible, DictOf, Prop } from 'civkit/coercible';
 import { GlobalLogger } from './logger';
 import { ExtendedSnapshot, PageSnapshot } from './puppeteer';
 import { AsyncLocalContext } from '../services/async-context';
@@ -58,7 +58,7 @@ export interface FormattedPage {
     [Symbol.dispose]?: () => void;
 }
 
-export class FormattedPageDto extends AutoCastable {
+export class FormattedPageDto extends Coercible {
     @Prop({
         default: '',
     })

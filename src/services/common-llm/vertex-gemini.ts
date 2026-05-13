@@ -57,7 +57,7 @@ export class VertexGeminiPro extends GeminiPro {
                 this.refreshCreds().catch((e) => {
                     this.logger.error('Failed to refresh creds', e);
                 });
-            }, 60 * 20 * 1000);
+            }, 60 * 20 * 1000).unref();
         } catch (err) {
             this.logger.warn('Failed to initialize Vertex Gemini clients', err);
         }
@@ -189,6 +189,26 @@ export class VertexGemini25FlashLite extends VertexGeminiPro {
     static override description = 'Vertex AI Gemini 2.5 Flash Lite Model';
     static override aliases = ['vertex-gemini-2.5-flash-lite'];
     static override modelName = 'gemini-2.5-flash-lite';
+    static override interleavedPromptSupported = true;
+    static override jsonModeSchemaSupported = true;
+
+    static override windowSize = 1_000_000;
+}
+
+export class VertexGemini31FlashLite extends VertexGeminiPro {
+    static override description = 'Vertex AI Gemini 3.1 Flash Lite Preview';
+    static override aliases = ['vertex-gemini-3.1-flash-lite', 'vertex-gemini-3.1-flash-lite-preview'];
+    static override modelName = 'gemini-3.1-flash-lite-preview';
+    static override interleavedPromptSupported = true;
+    static override jsonModeSchemaSupported = true;
+
+    static override windowSize = 1_000_000;
+}
+
+export class VertexGemini31Pro extends VertexGeminiPro {
+    static override description = 'Vertex AI Gemini 3.1 Pro Preview';
+    static override aliases = ['vertex-gemini-3.1-pro', 'vertex-gemini-3.1-pro-preview'];
+    static override modelName = 'gemini-3.1-pro-preview';
     static override interleavedPromptSupported = true;
     static override jsonModeSchemaSupported = true;
 

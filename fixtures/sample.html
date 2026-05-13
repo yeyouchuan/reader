@@ -65,6 +65,22 @@ crawler.start('https://example.com');</code></pre>
     <h2>Section Seven: More Resources</h2>
     <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Tiny pixel">
     <p>See also the <a href="/guide/advanced">advanced guide</a> and <a href="sibling-page">sibling page</a>.</p>
+
+    <h2>Section Eight: Deferred Content</h2>
+    <div id="deferred-content" class="loading" data-loaded="false">Loading deferred section, please wait…</div>
+    <script>
+      // Simulates a lazily-rendered widget: real browsers see the loaded
+      // state after ~100ms; HTML-only consumers see the static fallback
+      // above. Useful for exercising mutation-idle / wait-for-selector.
+      setTimeout(function () {
+        var el = document.getElementById('deferred-content');
+        if (!el) { return; }
+        el.classList.remove('loading');
+        el.classList.add('loaded');
+        el.setAttribute('data-loaded', 'true');
+        el.textContent = 'Deferred content fully loaded after 100ms.';
+      }, 100);
+    </script>
   </article>
 
   <aside class="sidebar">

@@ -1,16 +1,7 @@
-## Local development
-
-- npm install
-- docker compose up -d
-- npm run init-db
-
-VSCode F5 start debugger
-
-OR after setting up appropriate environment variables:
-- docker compose up -d
-- npm run dev
-
 # Reader
+
+[![codecov](https://codecov.io/gh/jina-ai/reader/branch/main/graph/badge.svg)](https://codecov.io/gh/jina-ai/reader)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jina-ai/reader)
 
 Your LLMs deserve better input.
 
@@ -27,18 +18,22 @@ Or just visit these URLs (**Read**) https://r.jina.ai/https://github.com/jina-ai
 <img width="973" alt="image" src="https://github.com/jina-ai/reader/assets/2041322/2067c7a2-c12e-4465-b107-9a16ca178d41">
 <img width="973" alt="image" src="https://github.com/jina-ai/reader/assets/2041322/675ac203-f246-41c2-b094-76318240159f">
 
+> This repository is the open source branch of the codebase behind `https://r.jina.ai` and `https://s.jina.ai`. It runs in stateless or bucket-cached mode; the MongoDB-backed SaaS storage layer is not included here.
 
 ## Updates
 
-- **2024-10-08**: Introduced an `adaptive crawler`. It can recursively crawl the website and extract the most relevant pages for a given webpage.
-- **2024-07-15**: To restrict the results of `s.jina.ai` to certain domain/website, you can set e.g. `site=jina.ai` in the query parameters, which enables in-site search. For more options, [try our updated live-demo](https://jina.ai/reader/#apiform).
-- **2024-07-01**: We have resolved a DDoS attack and other traffic abusing since June 27th. We also found a bug introduced on June 28th which may cause higher latency for some websites. The attack and the bug have been solved; if you have experienced high latency of r.jina.ai between June 27th-30th, it should back to normal now.
-- **2024-05-30**: Reader can now read abitrary PDF from any URL! Check out [this PDF result from NASA.gov](https://r.jina.ai/https://www.nasa.gov/wp-content/uploads/2023/01/55583main_vision_space_exploration2.pdf) vs [the original](https://www.nasa.gov/wp-content/uploads/2023/01/55583main_vision_space_exploration2.pdf).
-- **2024-05-15**: We introduced a new endpoint `s.jina.ai` that searches on the web and return top-5 results, each in a LLM-friendly format. [Read more about this new feature here](https://jina.ai/news/jina-reader-for-search-grounding-to-improve-factuality-of-llms).
-- **2024-05-08**: Image caption is off by default for better latency. To turn it on, set `x-with-generated-alt: true` in the request header.
-- **2024-05-03**: We finally resolved a DDoS attack since April 29th. Now our API is much more reliable and scalable than ever!
-- **2024-04-24**: You now have more fine-grained control over Reader API [using headers](#using-request-headers), e.g. forwarding cookies, using HTTP proxy.
-- **2024-04-15**: Reader now supports image reading! It captions all images at the specified URL and adds `Image [idx]: [caption]` as an alt tag (if they initially lack one). This enables downstream LLMs to interact with the images in reasoning, summarizing etc. [See example here](https://x.com/JinaAI_/status/1780094402071023926).
+- **2026-04** — Re-synchronized the open source branch with the SaaS code. The MongoDB-backed storage layer is stripped; the oss branch runs in stateless mode out of the box, with optional MinIO/S3-compatible bucket caching via `docker compose`. See [Local development](#local-development).
+- **2025-12** — Storage layer decoupled and binary file uploads landed. PDFs and MS Office documents (Word, Excel, PowerPoint) can now be POSTed directly via the `file` body field — no need to host them first. See [cookbooks.md](./cookbooks.md#pdf-ms-office-and-raw-html-uploads).
+- **2025-03** — Major refactor: Reader is no longer a Firebase application. The SaaS migrated off Firestore + Cloud Functions to a Cloud Run image with MongoDB Atlas, removing the platform-coupled bits and unblocking the local-Docker path above.
+- **2024-05** — `s.jina.ai` launched, extending Reader from URL→markdown to search→markdown. PDFs added the same month — any URL ending in `.pdf` is parsed with PDF.js and returned as markdown.
+- **2024-04** — Reader released and `r.jina.ai` went live as Jina AI's first SaaS API for converting URLs to LLM-friendly input.
+
+## What Reader can read
+
+- **Web pages** — rendered with headless Chrome, or fetched lightweight via `curl-impersonate`. Reader picks intelligently between the two.
+- **PDFs** — any URL, parsed with PDF.js. [See this NASA PDF result](https://r.jina.ai/https://www.nasa.gov/wp-content/uploads/2023/01/55583main_vision_space_exploration2.pdf) vs [the original](https://www.nasa.gov/wp-content/uploads/2023/01/55583main_vision_space_exploration2.pdf).
+- **MS Office documents** — Word, Excel, PowerPoint, converted via LibreOffice and then processed as HTML/PDF.
+- **Images** — captioned by a vision-language model, so your downstream text-only LLM gets *just enough* hints to reason about them.
 
 ## Usage
 
@@ -69,121 +64,193 @@ We highly recommend using the code builder to explore different parameter combin
 
 <a href="https://jina.ai/reader#apiform"><img width="973" alt="image" src="https://github.com/jina-ai/reader/assets/2041322/a490fd3a-1c4c-4a3f-a95a-c481c2a8cc8f"></a>
 
-
 ### Using request headers
 
-As you have already seen above, one can control the behavior of the Reader API using request headers. Here is a complete list of supported headers.
+You can control the behavior of the Reader API using request headers. The list below covers the most useful ones — for the full surface with up-to-date defaults and validation rules, see the live API docs at [https://r.jina.ai/docs](https://r.jina.ai/docs), or the source of truth in [`src/dto/crawler-options.ts`](./src/dto/crawler-options.ts).
 
-- You can enable the image caption feature via the `x-with-generated-alt: true` header.
-- You can ask the Reader API to forward cookies settings via the `x-set-cookie` header.
-  - Note that requests with cookies will not be cached.
-- You can bypass `readability` filtering via the `x-respond-with` header, specifically:
-  - `x-respond-with: markdown` returns markdown *without* going through `reability`
-  - `x-respond-with: html` returns `documentElement.outerHTML`
-  - `x-respond-with: text` returns `document.body.innerText`
-  - `x-respond-with: screenshot` returns the URL of the webpage's screenshot
-- You can specify a proxy server via the `x-proxy-url` header.
-- You can customize cache tolerance via the `x-cache-tolerance` header (integer in seconds).
-- You can bypass the cached page (lifetime 3600s) via the `x-no-cache: true` header (equivalent of `x-cache-tolerance: 0`).
-- If you already know the HTML structure of your target page, you may specify `x-target-selector` or `x-wait-for-selector` to direct the Reader API to focus on a specific part of the page.
-  - By setting `x-target-selector` header to a CSS selector, the Reader API return the content within the matched element, instead of the full HTML. Setting this header is useful when the automatic content extraction fails to capture the desired content and you can manually select the correct target.
-  - By setting `x-wait-for-selector` header to a CSS selector, the Reader API will wait until the matched element is rendered before returning the content. If you already specified `x-wait-for-selector`, this header can be omitted if you plan to wait for the same element.
+- `x-respond-with` — bypass `readability` filtering:
+  - `markdown` returns markdown *without* going through `readability`
+  - `html` returns `documentElement.outerHTML`
+  - `text` returns `document.body.innerText`
+  - `screenshot` returns the URL of the webpage's screenshot
+  - `pageshot` similar to `screenshot` but tries to capture the whole page instead of just the viewport
+- `x-engine` — enforces a fetching engine: `browser` (headless Chrome), `curl` (lightweight, no JS), or `auto` (the default — Combined use of both browser and curl).
+- `x-proxy-url` — route the traffic through your designated proxy.
+- `x-cache-tolerance` — integer seconds; how stale a cached page is acceptable.
+- `x-no-cache: true` — bypass the cached page (lifetime 3600s). Equivalent to `x-cache-tolerance: 0`.
+- `x-target-selector` — a CSS selector. Reader returns content within the matched element instead of the full page. Useful when automatic content extraction misses what you want.
+- `x-wait-for-selector` — a CSS selector. Reader waits until the matched element is rendered before returning. If `x-target-selector` is set, this can be omitted to wait for the same element.
+- `x-timeout` — integer seconds (max 180). When set, Reader will not return early; it waits for network idle or until the timeout is reached.
+- `x-max-tokens` — integer (≥500). Trim the response so it never exceeds this many tokens. Useful as a per-request guardrail when feeding a fixed-size context window — Reader truncates rather than rejects.
+- `x-token-budget` — integer. Reject the request if the resulting content would exceed this many tokens. Use this when *over*-budget output is worse than no output (e.g. cost control). Ignored on the search endpoint.
+- `x-respond-timing` — explicit control over *when* Reader is willing to return. Trade off latency against completeness:
+  - `html` — return as soon as the raw HTML lands. No JS execution, no waiting.
+  - `visible-content` — return the moment readable content is parseable. Lowest latency that still produces text.
+  - `mutation-idle` — wait for DOM mutations to settle for ≥0.2s. Good default for SPAs that lazy-render above the fold.
+  - `resource-idle` — wait for content-affecting resources to finish loading (≥0.5s quiet). The default heuristic for content-shaped requests.
+  - `media-idle` — wait for media (images, video, fonts) to also finish. Use with `screenshot` / `pageshot` / `vlm`.
+  - `network-idle` — full `networkidle0`. Slowest, most complete. Implied when `x-timeout` ≥ 20.
+
+  When omitted, Reader picks one based on `x-respond-with`, `x-timeout`, and `x-with-iframe`. See `presumedRespondTiming` in [src/dto/crawler-options.ts](./src/dto/crawler-options.ts) for the exact rules.
+- `x-with-generated-alt: true` — caption images on the page with a VLM.
+- `x-retain-images` — control how images survive into the output:
+  - `all` (default) — keep `![alt](url)` markdown for every image.
+  - `none` — drop images entirely.
+  - `alt` — keep alt text only, no URLs. Cheap on tokens; useful when the downstream LLM has no use for the image link.
+- `x-retain-links` — control how links survive into the output:
+  - `all` (default) — keep `[text](url)` markdown.
+  - `none` — drop links entirely.
+  - `text` — keep link anchor text only, drop URLs. Best for embedding / semantic-index pipelines where URLs are noise.
+  - `gpt-oss` — emit citations in gpt-oss's `【{id}†...】` format and append a numbered URL footer (also auto-enables `x-with-links-summary`).
+- `x-with-links-summary` / `x-with-images-summary` — append a deduplicated footer of all links / images to the output. Combine with `x-retain-links: text` or `x-retain-images: alt` to get inline anchor/alt text plus *one* canonical URL list at the end — convenient when you want the model to see URLs without paying for them inline. `x-with-links-summary: all` keeps every link instead of only the unique ones.
+- `x-markdown-chunking` — opt-in semantic chunking of the markdown response. Returns a JSON array (or ``-delimited text) of chunks instead of one blob:
+  - `true` / `h1` … `h5` — heading-based split at the given heading level (e.g. `h3` chunks at `#`, `##`, and `###`).
+  - `structured` / `s1` … `s5` — block-level structured split. `s1` is coarsest, `s5` finest.
+- `x-set-cookie` — forward cookie settings. Requests with cookies are not cached.
+- `x-md-*` — fine-tune markdown output (heading style, bullet markers, link style, etc.). See [src/dto/turndown-tweakable-options.ts](./src/dto/turndown-tweakable-options.ts).
 
 ### Using `r.jina.ai` for single page application (SPA) fetching
-Many websites nowadays rely on JavaScript frameworks and client-side rendering. Usually known as Single Page Application (SPA). Thanks to [Puppeteer](https://github.com/puppeteer/puppeteer) and headless Chrome browser, Reader natively supports fetching these websites. However, due to specific approach some SPA are developed, there may be some extra precautions to take. 
+Many websites nowadays rely on JavaScript frameworks and client-side rendering, usually known as Single Page Applications (SPA). Thanks to [Puppeteer](https://github.com/puppeteer/puppeteer) and headless Chrome, Reader natively supports fetching these websites. However, due to specific approaches some SPAs are developed with, there may be some extra precautions to take.
 
 #### SPAs with hash-based routing
-By definition of the web standards, content come after `#` in a URL is not sent to the server. To mitigate this issue, use `POST` method with `url` parameter in body.
+By definition of the web standards, content after `#` in a URL is not sent to the server. To mitigate this, use `POST` with the `url` parameter in the body:
 
 ```bash
-curl -X POST 'https://r.jina.ai/' -d 'url=https://example.com/#/route' 
+curl -X POST 'https://r.jina.ai/' -d 'url=https://example.com/#/route'
 ```
 
 #### SPAs with preloading contents
-Some SPAs, or even some websites that are not strictly SPAs, may show preload contents before later loading the main content dynamically. In this case, Reader may be capturing the preload content instead of the main content. To mitigate this issue, here are some possible solutions:
-
-##### Specifying `x-timeout` 
-When timeout is explicitly specified, Reader will not attempt to return early and will wait for network idle until the timeout is reached. This is useful when the target website will eventually come to a network idle. 
+Some SPAs (and even some non-SPAs) show preload content before later loading the main content dynamically. In this case, Reader may capture the preload content instead. Two ways to mitigate:
 
 ```bash
-curl 'https://example.com/' -H 'x-timeout: 30'
+# wait for network idle or until timeout
+curl 'https://r.jina.ai/https://example.com/' -H 'x-timeout: 10'
+
+# wait for a specific element
+curl 'https://r.jina.ai/https://example.com/' -H 'x-wait-for-selector: #content'
+
+# combined use of both to wait for non-existent element (which means waiting for the full timeout duration)
+curl 'https://r.jina.ai/https://example.com/' -H 'x-timeout: 30' -H 'x-wait-for-selector: non-existent-element'
 ```
-
-##### Specifying `x-wait-for-selector` 
-When wait-for-selector is explicitly specified, Reader will wait for the appearance of the specified CSS selector until timeout is reached. This is useful when you know exactly what element to wait for. 
-
-```bash
-curl 'https://example.com/' -H 'x-wait-for-selector: #content'
-```
-
-### Streaming mode
-
-Streaming mode is useful when you find that the standard mode provides an incomplete result. This is because the Reader will wait a bit longer until the page is *stablely* rendered. Use the accept-header to toggle the streaming mode:
-
-```bash
-curl -H "Accept: text/event-stream" https://r.jina.ai/https://en.m.wikipedia.org/wiki/Main_Page
-```
-
-The data comes in a stream; each subsequent chunk contains more complete information. **The last chunk should provide the most complete and final result.** If you come from LLMs, please note that it is a different behavior than the LLMs' text-generation streaming.
-
-For example, compare these two curl commands below. You can see streaming one gives you complete information at last, whereas standard mode does not. This is because the content loading on this particular site is triggered by some js *after* the page is fully loaded, and standard mode returns the page "too soon".
-```bash
-curl -H 'x-no-cache: true' https://access.redhat.com/security/cve/CVE-2023-45853
-curl -H "Accept: text/event-stream" -H 'x-no-cache: true' https://r.jina.ai/https://access.redhat.com/security/cve/CVE-2023-45853
-```
-
-> Note: `-H 'x-no-cache: true'` is used only for demonstration purposes to bypass the cache.
-
-Streaming mode is also useful if your downstream LLM/agent system requires immediate content delivery or needs to process data in chunks to interleave I/O and LLM processing times. This allows for quicker access and more efficient data handling:
-
-```text
-Reader API:  streamContent1 ----> streamContent2 ----> streamContent3 ---> ... 
-                          |                    |                     |
-                          v                    |                     |
-Your LLM:                 LLM(streamContent1)  |                     |
-                                               v                     |
-                                               LLM(streamContent2)   |
-                                                                     v
-                                                                     LLM(streamContent3)
-```
-
-Note that in terms of completeness: `... > streamContent3 > streamContent2 > streamContent1`, each subsequent chunk contains more complete information.
 
 ### JSON mode
 
-This is still very early and the result is not really a "useful" JSON. It contains three fields `url`, `title` and `content` only. Nonetheless, you can use accept-header to control the output format:
+Use the accept-header to control the output format:
+
 ```bash
 curl -H "Accept: application/json" https://r.jina.ai/https://en.m.wikipedia.org/wiki/Main_Page
 ```
 
-JSON mode is probably more useful in `s.jina.ai` than `r.jina.ai`. For `s.jina.ai` with JSON mode, it returns 5 results in a list, each in the structure of `{'title', 'content', 'url'}`.
-
 ### Generated alt
 
-All images in that page that lack `alt` tag can be auto-captioned by a VLM (vision langauge model) and formatted as `!(Image [idx]: [VLM_caption])[img_URL]`. This should give your downstream text-only LLM *just enough* hints to include those images into reasoning, selecting, and summarization. Use the x-with-generated-alt header to toggle the streaming mode:
+All images on a page that lack an `alt` tag can be auto-captioned by a VLM (vision-language model) and formatted as `![Image [idx]: [VLM_caption]](img_URL)`. This should give your downstream text-only LLM *just enough* hints to include those images in reasoning, selection, and summarization:
 
 ```bash
 curl -H "X-With-Generated-Alt: true" https://r.jina.ai/https://en.m.wikipedia.org/wiki/Main_Page
 ```
 
-## Install
+## Cookbooks
 
-You will need the following tools to run the project:
-- Node v18 (The build fails for Node version >18)
+For pipeline-specific recipes — RAG, semantic indexing, deep research, agentic browsing, visual snapshots, PDF/Office/HTML uploads, and more — see [cookbooks.md](./cookbooks.md). Each entry is a short curl example with the header combination that fits the use case and a paragraph explaining the trade-offs.
+
+## Self-host with Docker
+
+A prebuilt image of the open-source branch is published to GitHub Container Registry. It bundles headless Chrome, LibreOffice, and CJK fonts, so you can run Reader without building it yourself.
+
+```bash
+docker pull ghcr.io/jina-ai/reader:oss
+```
+
+### Run
+
+The image exposes two ports:
+
+- `8080` — **h2c** (HTTP/2 cleartext). Production-grade, multiplexed; this is what Cloud Run talks to. Plain `curl` won't speak it without `--http2-prior-knowledge`.
+- `8081` — **HTTP/1.1** fallback. Same handler, same routes; use this from anything that doesn't speak h2c.
+
+For a quick try-out from `curl` or a browser, map the HTTP/1.1 port:
+
+```bash
+docker run --rm -p 3000:8081 ghcr.io/jina-ai/reader:oss
+# then: curl http://localhost:3000/https://example.com
+```
+
+For load-testing or production-shape traffic, map the h2c port instead (or both):
+
+```bash
+docker run --rm -p 3000:8080 -p 3001:8081 ghcr.io/jina-ai/reader:oss
+```
+
+With no extra config the container is fully stateless — every request hits the live URL, no cache, no rate limiting. That's the right default for a quick try-out, CI, or throwaway environments.
+
+### Run with caching
+
+Point Reader at an S3-compatible bucket to cache fetched pages and reuse them across requests:
+
+```bash
+docker run --rm -p 3000:8081 \
+  -e GCP_STORAGE_ENDPOINT=https://s3.example.com \
+  -e GCP_STORAGE_BUCKET=reader-cache \
+  -e GCP_STORAGE_ACCESS_KEY=... \
+  -e GCP_STORAGE_SECRET_KEY=... \
+  ghcr.io/jina-ai/reader:oss
+```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md#environment-variables) for the full env-var table.
+
+## Local development
+
+Requirements:
+- nvm use
+- Docker *(optional — only if you want a local MinIO bucket cache)*
 
 ```bash
 git clone git@github.com:jina-ai/reader.git
+cd reader
 npm install
+# Optional, for bucket-cached mode:
+docker compose up -d
 ```
 
-## What is `thinapps-shared` submodule?
+Then either press `F5` in VSCode to launch the debugger, or after setting up the appropriate environment variables:
 
-You might notice a reference to `thinapps-shared` submodule, an internal package we use to share code across our products. While it’s not open-sourced and isn't integral to the Reader's functions, it mainly helps with decorators, logging, secrets management, etc. Feel free to ignore it for now.
+```bash
+npm run dev
+```
 
-That said, this is *the single codebase* behind `https://r.jina.ai`, so everytime we commit here, we will deploy the new version to the `https://r.jina.ai`.
+For a deeper tour of the codebase — engines, formatting profiles, abuse alleviation, deployment topology — see [architecture.md](./architecture.md). For dev workflow, env vars, and tests, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+### Licensed assets
+
+A few non-redistributable artifacts live in `licensed/` and are needed at build/runtime:
+
+- `GeoLite2-City.mmdb` and `geolite2-asn.mmdb` — MaxMind GeoLite databases (geolocation + ASN lookups).
+- `SourceHanSansSC-Regular.otf` — Source Han Sans (CJK rendering for PDFs/screenshots).
+- `gsa_useragents.txt` — user-agent list used by the curl engine.
+
+Fetch them in one shot:
+
+```bash
+npm run assets:download
+```
+
+The script (`download-external-assets.sh`) is idempotent — it skips files already present and exits 0 even on partial network failure. Set `FORCE_DOWNLOAD_EXTERNAL=1` to overwrite, or `SKIP_DOWNLOAD_EXTERNAL=1` to bypass entirely if you supply your own copies. The repo's CI fetches the same URLs inline; this script exists for local convenience.
+
+## How it works
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jina-ai/reader)
 
 ## Having trouble on some websites?
-Please raise an issue with the URL you are having trouble with. We will look into it and try to fix it.
+
+Some sites push back against scrapers — bot challenges, geo blocks, stale CDN edges. A few knobs to try, in roughly increasing order of "this is bothering me":
+
+- **Use an API key.** Anonymous traffic is the most aggressively rate-limited and lands in the lowest-trust pool. Authenticated requests get a higher quota and access to features like the internal proxy. Get one at [jina.ai/reader](https://jina.ai/reader#pricing).
+- **Bypass the cache** with `-H 'x-no-cache: true'`. If a stale or already-blocked response got cached, this forces a fresh fetch.
+- **Force the browser engine** with `-H 'x-engine: browser'`. The default `auto` engine prefers the lightweight curl path when it can; some sites only serve real content to a JS-capable browser.
+- **Route through the SaaS proxy** with `-H 'x-proxy: auto'` (key required). Reader's hosted proxy pool rotates residential / datacenter IPs and handles common anti-bot challenges automatically. You can also pin a country, e.g. `x-proxy: us` (see [Geo- and locale-sensitive scraping](./cookbooks.md#geo--and-locale-sensitive-scraping)).
+- **Bring your own proxy** with `-H 'x-proxy-url: <url>'`. As a last resort — when even the hosted proxy can't get through — buy a residential or ISP-grade proxy from a third-party provider (BrightData, Thordata, Oxylabs, etc.) and pass the URL directly. Supports `http`, `https`, `socks4`, `socks5`; for auth use `https://user:pass@host:port`.
+
+If none of those help, please open an issue with the URL and the headers you tried — we'll take a look.
 
 ## License
+
 Reader is backed by [Jina AI](https://jina.ai) and licensed under [Apache-2.0](./LICENSE).

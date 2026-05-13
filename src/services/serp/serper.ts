@@ -6,7 +6,7 @@ import { SerperBingHTTP, SerperGoogleHTTP, SerperImageSearchResponse, SerperNews
 import { BlackHoleDetector } from '../blackhole-detector';
 import { Context } from '../registry';
 import { AsyncService } from 'civkit/async-service';
-import { AutoCastable, Prop, RPC_CALL_ENVIRONMENT } from 'civkit/civ-rpc';
+import { Coercible, Prop, RPC_CALL_ENVIRONMENT } from 'civkit/civ-rpc';
 import { EnvConfig } from '../envconfig';
 
 @singleton()
@@ -91,7 +91,7 @@ export class SerperBingSearchService extends SerperGoogleSearchService {
     }
 }
 
-export class GoogleSearchExplicitOperatorsDto extends AutoCastable {
+export class GoogleSearchExplicitOperatorsDto extends Coercible {
     @Prop({
         arrayOf: String,
         desc: `Returns web pages with a specific file extension. Example: to find the Honda GX120 Owner’s manual in PDF, type “Honda GX120 ownners manual ext:pdf”.`

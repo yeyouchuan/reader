@@ -1,4 +1,4 @@
-import { Also, ArrayOf, AutoCastable, ParamValidationError, Pick, Prop } from 'civkit/civ-rpc';
+import { Also, ArrayOf, Coercible, ParamValidationError, Pick, Prop } from 'civkit/civ-rpc';
 import { AbstractLLM, DependsOnOptions } from './base';
 import { LLMFunctionCallRequest, LLMFunctionCallResponse, LLMMessage, LLMModelOptions, PromptChunk, chatMLEncode, parseJSON, stringPromptChunks } from './misc';
 import { OpenAIHTTP } from '../../3rd-party/openai';
@@ -39,7 +39,7 @@ export interface ChatGPTFunctionCall {
     arguments: string;
 }
 
-export class ChatGPTFunctionCall extends AutoCastable {
+export class ChatGPTFunctionCall extends Coercible {
     @Prop({
         desc: 'The name of the function to call.',
         required: true,
@@ -53,7 +53,7 @@ export class ChatGPTFunctionCall extends AutoCastable {
     arguments!: string;
 }
 
-export class ChatGPTToolCall_Function extends AutoCastable {
+export class ChatGPTToolCall_Function extends Coercible {
     @Prop({
         desc: 'The ID of the tool call',
         required: true,
@@ -77,7 +77,7 @@ export class ChatGPTToolCall_Function extends AutoCastable {
     index?: number;
 }
 
-export class ChatGPTMessageTextChunk extends AutoCastable {
+export class ChatGPTMessageTextChunk extends Coercible {
     @Prop({
         desc: 'Type of the message chunk',
         default: 'text',
@@ -98,7 +98,7 @@ export enum CHAT_GPT_IMAGE_DETAIL {
     LOW = 'low',
     HIGH = 'high',
 }
-export class ChatGPTMessageImageUrl extends AutoCastable {
+export class ChatGPTMessageImageUrl extends Coercible {
     @Prop({
         desc: 'Either a URL of the image or the base64 encoded image data.',
     })
@@ -111,7 +111,7 @@ export class ChatGPTMessageImageUrl extends AutoCastable {
     })
     detail?: CHAT_GPT_IMAGE_DETAIL | 'string';
 }
-export class ChatGPTMessageImageUrlChunk extends AutoCastable {
+export class ChatGPTMessageImageUrlChunk extends Coercible {
     @Prop({
         desc: 'Type of the message chunk',
         default: 'image_url',
@@ -127,7 +127,7 @@ export class ChatGPTMessageImageUrlChunk extends AutoCastable {
     image_url!: ChatGPTMessageImageUrl;
 }
 
-export class ChatGPTMessage extends AutoCastable {
+export class ChatGPTMessage extends Coercible {
     @Prop({
         desc: 'The role of the author of this message.',
         required: true,
@@ -178,7 +178,7 @@ export class ClassicChatGPTMessage extends ChatGPTMessage {
     override content!: string;
 }
 
-export class ChatGPTFunctionDescriber extends AutoCastable {
+export class ChatGPTFunctionDescriber extends Coercible {
     @Prop({
         desc: 'The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.',
         validate: (x: string) => /[a-zA-Z0-9_]{1,64}/.test(x),
@@ -204,7 +204,7 @@ export enum CHAT_GPT_RESPONSE_FORMAT {
     JSON_OBJECT = 'json_object',
 }
 
-export class ChatGPTResponseFormat extends AutoCastable {
+export class ChatGPTResponseFormat extends Coercible {
     @Prop({
         required: true,
         default: CHAT_GPT_RESPONSE_FORMAT.TEXT,
@@ -217,7 +217,7 @@ export enum CHAT_GPT_TOOL_TYPE {
     FUNCTION = 'function',
 }
 
-export class ChatGPTToolDescriber_Function extends AutoCastable {
+export class ChatGPTToolDescriber_Function extends Coercible {
     @Prop({
         required: true,
         default: CHAT_GPT_TOOL_TYPE.FUNCTION,
@@ -231,7 +231,7 @@ export class ChatGPTToolDescriber_Function extends AutoCastable {
     function!: ChatGPTFunctionDescriber;
 }
 
-export class ChatGPTToolReference_Function extends AutoCastable {
+export class ChatGPTToolReference_Function extends Coercible {
     @Prop({
         required: true,
         default: CHAT_GPT_TOOL_TYPE.FUNCTION,
@@ -246,7 +246,7 @@ export class ChatGPTToolReference_Function extends AutoCastable {
     function!: Pick<ChatGPTFunctionDescriber, 'name'>;
 }
 
-export class ChatGPTModelOptions extends AutoCastable {
+export class ChatGPTModelOptions extends Coercible {
     static windowSize = 4096;
 
     @Prop({

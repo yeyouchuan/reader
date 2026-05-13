@@ -2,10 +2,19 @@ run-name: Build push container image to GH
 on:
   push:
     branches:
-      - oss
+      - main
+    tags:
+      - '*'
 
 jobs:
+  test:
+    uses: ./.github/workflows/_test.yml
+    permissions:
+      contents: read
+    secrets: inherit
+
   build-and-push-to-ghcr:
+    needs: test
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.ref_type == 'branch' && github.ref }}
@@ -53,6 +62,9 @@ jobs:
         with:
           images: |
             ghcr.io/jina-ai/reader
+          labels: |
+            org.opencontainers.image.created={{timestamp}}
+            org.opencontainers.image.source="https://github.com/jina-ai/reader"
           flavor: |
             latest=true
       - name: Set up QEMU
