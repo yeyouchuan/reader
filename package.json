@@ -35,7 +35,7 @@
     "@mozilla/readability": "^0.6.0",
     "@napi-rs/canvas": "^0.1.68",
     "@nomagick/mathml-to-latex": "^1.5.3",
-    "@nomagick/node-libcurl-impersonate": "^5.0.3",
+    "@nomagick/node-libcurl-impersonate": "^5.0.4",
     "civkit": "^0.10.0-ca17c8a",
     "dayjs": "^1.11.9",
     "franc": "^6.2.0",
