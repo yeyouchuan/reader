@@ -414,28 +414,28 @@ function detachDisplayNoneElements(root) {
         return detached;
     }
     const skipTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'LINK', 'META', 'HEAD']);
-    const stack = [startRoot];
-    while (stack.length) {
-        const elem = stack.pop();
-        const children = Array.from(elem.children);
-        for (const child of children) {
-            if (skipTags.has(child.tagName)) {
-                continue;
-            }
-            let cs;
-            try {
-                cs = window.getComputedStyle(child);
-            } catch (err) {
-                cs = null;
-            }
-            if (cs && cs.display === 'none') {
-                const marker = document.createComment('jina-detached-invisible');
-                child.parentNode.replaceChild(marker, child);
-                detached.push({ marker, elem: child });
-            } else {
-                stack.push(child);
-            }
+    const toDetach = [];
+    const walker = document.createTreeWalker(startRoot, NodeFilter.SHOW_ELEMENT, (node) => {
+        if (skipTags.has(node.tagName)) {
+            return NodeFilter.FILTER_REJECT;
         }
+        let cs;
+        try {
+            cs = window.getComputedStyle(node);
+        } catch (e) {
+            cs = null;
+        }
+        if (cs && cs.display === 'none') {
+            toDetach.push(node);
+            return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+    });
+    while (walker.nextNode()) { /* traversal drives the filter */ }
+    for (const elem of toDetach) {
+        const marker = document.createComment('jina-detached-invisible');
+        elem.parentNode.replaceChild(marker, elem);
+        detached.push({ marker, elem });
     }
     return detached;
 }
