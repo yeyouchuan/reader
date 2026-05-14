@@ -4,7 +4,7 @@ import { ThorDataProxyProvider } from './thordata';
 // import { BrightDataProxyProvider } from './brightdata';
 import { AsyncService } from 'civkit/async-service';
 import { randomPick } from 'civkit/random';
-import { AssertionFailureError } from 'civkit/civ-rpc';
+import { ServiceBadApproachError } from '../errors';
 
 
 const TIER_1_ENGLISH_SPEAKING_COUNTRIES = ['us', 'ca', 'gb', 'au', 'nz', 'sg'];
@@ -59,7 +59,7 @@ export class ProxyProviderService extends AsyncService {
         const someClient = this.clients.find((client) => client.supports(countryCode));
 
         if (!someClient) {
-            throw new AssertionFailureError(`No proxy provider found that supports the country code: ${countryCode}.`);
+            throw new ServiceBadApproachError(`No proxy provider found that supports country code: ${countryCode}.`);
         }
 
         return someClient.alloc(countryCode);
@@ -67,7 +67,7 @@ export class ProxyProviderService extends AsyncService {
 
     *loopClients() {
         if  (!this.clients.length) {
-            throw new AssertionFailureError('No proxy provider found.');
+            throw new ServiceBadApproachError('No proxy provider found.');
         }
         while (true) {
             yield* this.clients;
