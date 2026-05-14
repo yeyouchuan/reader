@@ -98,6 +98,11 @@ describe('CrawlerOptions.isCacheQueryApplicable', () => {
         const opts = makeOpts({ removeOverlay: true });
         assert.strictEqual(opts.isCacheQueryApplicable(), false);
     });
+
+    it('returns false when detachInvisibles is true', () => {
+        const opts = makeOpts({ detachInvisibles: true });
+        assert.strictEqual(opts.isCacheQueryApplicable(), false);
+    });
 });
 
 // ── browserIsNotRequired ─────────────────────────────────────────────────────
@@ -142,6 +147,10 @@ describe('CrawlerOptions.browserIsNotRequired', () => {
 
     it('returns false when html is provided (needs puppeteer for rendering)', () => {
         assert.strictEqual(makeOpts({ html: '<html/>' }).browserIsNotRequired(), false);
+    });
+
+    it('returns false when detachInvisibles is set', () => {
+        assert.strictEqual(makeOpts({ detachInvisibles: true }).browserIsNotRequired(), false);
     });
 });
 
@@ -287,6 +296,16 @@ describe('CrawlerOptions.from() header parsing', () => {
         assert.throws(() => {
             fromWithHeaders({ 'x-respond-with': 'readerlm-v2+content' });
         });
+    });
+
+    it('parses X-Detach-Invisibles header as truthy', () => {
+        const opts = fromWithHeaders({ 'x-detach-invisibles': 'true' });
+        assert.strictEqual(opts.detachInvisibles, true);
+    });
+
+    it('parses X-Detach-Invisibles "false" as false', () => {
+        const opts = fromWithHeaders({ 'x-detach-invisibles': 'false' });
+        assert.strictEqual(opts.detachInvisibles, false);
     });
 
     it('parses X-Page header into integer page', () => {

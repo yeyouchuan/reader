@@ -23,6 +23,7 @@ import { minimalStealth } from './minimal-stealth';
 import { SecurityCompromiseError, ServiceCrashedError, ServiceNodeResourceDrainError } from './errors';
 import { randomBytes } from 'crypto';
 import { Finalizer } from './finalizer';
+import { privateIpNotAcceptable } from './misc';
 const tldExtract = require('tld-extract');
 
 const READABILITY_JS = fs.readFileSync(require.resolve('@mozilla/readability/Readability.js'), 'utf-8');
@@ -115,6 +116,7 @@ export interface ScrappingOptions<T = FancyFile | Blob> {
     injectPageScripts?: string[];
     viewport?: Viewport;
     proxyResources?: boolean;
+    detachInvisibles?: boolean;
 
     sideLoad?: {
         impersonate: {
@@ -405,6 +407,47 @@ let lastMutationIdle = 0;
 let initialAnalytics;
 document.addEventListener('mutationIdle', ()=> lastMutationIdle = Date.now());
 
+function detachDisplayNoneElements(root) {
+    const startRoot = root || document.body;
+    const detached = [];
+    if (!startRoot) {
+        return detached;
+    }
+    const skipTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'LINK', 'META', 'HEAD']);
+    const stack = [startRoot];
+    while (stack.length) {
+        const elem = stack.pop();
+        const children = Array.from(elem.children);
+        for (const child of children) {
+            if (skipTags.has(child.tagName)) {
+                continue;
+            }
+            let cs;
+            try {
+                cs = window.getComputedStyle(child);
+            } catch (err) {
+                cs = null;
+            }
+            if (cs && cs.display === 'none') {
+                const marker = document.createComment('jina-detached-invisible');
+                child.parentNode.replaceChild(marker, child);
+                detached.push({ marker, elem: child });
+            } else {
+                stack.push(child);
+            }
+        }
+    }
+    return detached;
+}
+function reattachDetachedElements(detached) {
+    if (!detached) return;
+    for (let i = detached.length - 1; i >= 0; i--) {
+        const { marker, elem } = detached[i];
+        if (marker.parentNode) {
+            marker.parentNode.replaceChild(elem, marker);
+        }
+    }
+}
 function detectOverlay() {
     const elemSet1 = document.elementsFromPoint(0,0);
     const elem1 = elemSet1[0];
@@ -430,87 +473,105 @@ function giveSnapshot(stopActiveSnapshot, overrideDomAnalysis) {
     if (stopActiveSnapshot) {
         window.haltSnapshot = true;
     }
-    let parsed;
+    let detached;
+    if (window.__detachInvisibles) {
+        try {
+            detached = detachDisplayNoneElements(document.documentElement);
+        } catch (err) {
+            void 0;
+        }
+    }
     try {
-        parsed = new Readability(document.cloneNode(true)).parse();
-    } catch (err) {
-        void 0;
-    }
-    const domAnalysis = overrideDomAnalysis || getMaxDepthAndElemCountUsingTreeWalker(document.documentElement);
-    initialAnalytics ??= domAnalysis;
-
-    const thisElemCount = domAnalysis.elementCount;
-    const initialElemCount = initialAnalytics.elementCount;
-    Math.abs(thisElemCount - initialElemCount) / (initialElemCount + Number.EPSILON)
-
-    const metadata = {};
-    const lang = document.documentElement.getAttribute('lang');
-    if (lang) {
-        metadata.lang = lang;
-    }
-    document.head.querySelectorAll('meta[content]').forEach((el) => {
-        const name = el.getAttribute('name') || el.getAttribute('property');
-        if (!name) {
-            return;
+        let parsed;
+        try {
+            parsed = new Readability(document.cloneNode(true)).parse();
+        } catch (err) {
+            void 0;
         }
-        const val = el.getAttribute('content') || '';
-        const curVal = Reflect.get(metadata, name);
-        if (Array.isArray(curVal)) {
-            curVal.push(val);
-        } else if (curVal) {
-            Reflect.set(metadata, name, [curVal, val]);
-        } else {
-            Reflect.set(metadata, name, val);
+        const domAnalysis = overrideDomAnalysis || getMaxDepthAndElemCountUsingTreeWalker(document.documentElement);
+        initialAnalytics ??= domAnalysis;
+
+        const thisElemCount = domAnalysis.elementCount;
+        const initialElemCount = initialAnalytics.elementCount;
+        Math.abs(thisElemCount - initialElemCount) / (initialElemCount + Number.EPSILON)
+
+        const metadata = {};
+        const lang = document.documentElement.getAttribute('lang');
+        if (lang) {
+            metadata.lang = lang;
         }
-    });
-    const external = {};
-    document.head.querySelectorAll('link[rel][href]').forEach((el) => {
-        const attributes = {};
-        el.getAttributeNames().forEach((attrName) => {
-            attributes[attrName] = el.getAttribute(attrName) || '';
+        document.head.querySelectorAll('meta[content]').forEach((el) => {
+            const name = el.getAttribute('name') || el.getAttribute('property');
+            if (!name) {
+                return;
+            }
+            const val = el.getAttribute('content') || '';
+            const curVal = Reflect.get(metadata, name);
+            if (Array.isArray(curVal)) {
+                curVal.push(val);
+            } else if (curVal) {
+                Reflect.set(metadata, name, [curVal, val]);
+            } else {
+                Reflect.set(metadata, name, val);
+            }
         });
-        const rels = attributes['rel']?.split(/\\s+/g).filter(Boolean) || [];
-        if (!rels?.length) {
-            return;
-        }
-        let href = attributes['href'] || '';
-        if (href) {
-            href = new URL(href, document.baseURI).href;
-        }
-        delete attributes.rel;
-        delete attributes.href;
+        const external = {};
+        document.head.querySelectorAll('link[rel][href]').forEach((el) => {
+            const attributes = {};
+            el.getAttributeNames().forEach((attrName) => {
+                attributes[attrName] = el.getAttribute(attrName) || '';
+            });
+            const rels = attributes['rel']?.split(/\\s+/g).filter(Boolean) || [];
+            if (!rels?.length) {
+                return;
+            }
+            let href = attributes['href'] || '';
+            if (href) {
+                href = new URL(href, document.baseURI).href;
+            }
+            delete attributes.rel;
+            delete attributes.href;
 
-        for (const rel of rels) {
-            external[rel] ??= {};
-            external[rel][href] ??= {};
-            Object.assign(external[rel][href], attributes);
-        }
-    });
-    delete external['stylesheet'];
-    delete external['shortcut'];
+            for (const rel of rels) {
+                external[rel] ??= {};
+                external[rel][href] ??= {};
+                Object.assign(external[rel][href], attributes);
+            }
+        });
+        delete external['stylesheet'];
+        delete external['shortcut'];
 
-    const r = {
-        title: document.title,
-        description: document.head?.querySelector('meta[name$="description"][content],meta[property$="description"][content]')?.getAttribute('content') ?? '',
-        href: document.location.href,
-        html: document.documentElement?.outerHTML,
-        htmlSignificantlyModifiedByJs: Boolean(Math.abs(thisElemCount - initialElemCount) / (initialElemCount + Number.EPSILON) > 0.05),
-        text: document.body?.innerText,
-        shadowExpanded: shadowDomPresent() ? cloneAndExpandShadowRoots()?.outerHTML : undefined,
-        parsed: parsed,
-        imgs: [],
-        maxElemDepth: domAnalysis.maxDepth,
-        elemCount: domAnalysis.elementCount,
-        lastMutationIdle,
-        metadata,
-        external
-    };
-    if (document.baseURI !== r.href) {
-        r.rebase = document.baseURI;
+        const r = {
+            title: document.title,
+            description: document.head?.querySelector('meta[name$="description"][content],meta[property$="description"][content]')?.getAttribute('content') ?? '',
+            href: document.location.href,
+            html: document.documentElement?.outerHTML,
+            htmlSignificantlyModifiedByJs: Boolean(Math.abs(thisElemCount - initialElemCount) / (initialElemCount + Number.EPSILON) > 0.05),
+            text: document.body?.innerText,
+            shadowExpanded: shadowDomPresent() ? cloneAndExpandShadowRoots()?.outerHTML : undefined,
+            parsed: parsed,
+            imgs: [],
+            maxElemDepth: domAnalysis.maxDepth,
+            elemCount: domAnalysis.elementCount,
+            lastMutationIdle,
+            metadata,
+            external
+        };
+        if (document.baseURI !== r.href) {
+            r.rebase = document.baseURI;
+        }
+        r.imgs = briefImgs();
+
+        return r;
+    } finally {
+        if (window.__detachInvisibles) {
+            try {
+                reattachDetachedElements(detached);
+            } catch (err) {
+                void 0;
+            }
+        }
     }
-    r.imgs = briefImgs();
-
-    return r;
 }
 function waitForSelector(selectorText) {
   return new Promise((resolve) => {
@@ -854,8 +915,10 @@ export class PuppeteerControl extends AsyncService {
             }
 
             if (
-                parsedUrl.hostname === 'localhost' ||
-                parsedUrl.hostname.startsWith('127.')
+                privateIpNotAcceptable && (
+                    parsedUrl.hostname === 'localhost' ||
+                    parsedUrl.hostname.startsWith('127.')
+                )
             ) {
                 page.emit('abuse', { url: requestUrl, page, sn, reason: `Suspicious action: Request to localhost: ${requestUrl}` });
 
@@ -1267,6 +1330,14 @@ export class PuppeteerControl extends AsyncService {
                 );
             });
         }
+        if (options.detachInvisibles) {
+            preparations.push(
+                page.evaluateOnNewDocument(() => {
+                    // @ts-ignore
+                    window.__detachInvisibles = true;
+                })
+            );
+        }
         const sn = this.snMap.get(page);
         this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
         if (options.locale) {
@@ -1401,7 +1472,8 @@ export class PuppeteerControl extends AsyncService {
             successfullyDone ??= true;
             try {
                 const pSubFrameSnapshots = this.snapshotChildFrames(page);
-                snapshot = await page.evaluate('giveSnapshot(true)') as PageSnapshot;
+                const detachFlag = options.detachInvisibles ? 'true' : 'false';
+                snapshot = await page.evaluate(`giveSnapshot(true, undefined, ${detachFlag})`) as PageSnapshot;
                 screenshot = (await this.takeScreenShot(page)) || screenshot;
                 pageshot = (await this.takeScreenShot(page, { fullPage: true })) || pageshot;
                 if (snapshot) {

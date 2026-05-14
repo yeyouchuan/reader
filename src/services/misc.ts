@@ -12,7 +12,7 @@ import _ from 'lodash';
 
 const normalizeUrl = require('@esm2cjs/normalize-url').default;
 
-const privateIpNotAcceptable = Boolean(process.env['NODE_ENV']?.toLowerCase()?.includes('prod') && process.env['GCLOUD_PROJECT']);
+export const privateIpNotAcceptable = Boolean(process.env['NODE_ENV']?.toLowerCase()?.includes('prod') && process.env['GCLOUD_PROJECT']);
 
 @singleton()
 export class MiscService extends AsyncService {

@@ -4,7 +4,7 @@ import { Cookie, parseString as parseSetCookieString } from 'set-cookie-parser';
 import { Context } from '../services/registry';
 import { TurnDownTweakableOptions } from './turndown-tweakable-options';
 import type { PageSnapshot } from '../services/puppeteer';
-import { PseudoBoolean } from '../lib/pseudo-boolean';
+import { PseudoBoolean, PseudoBooleanLoose } from '../lib/pseudo-boolean';
 import _ from 'lodash';
 
 export enum CONTENT_FORMAT {
@@ -287,6 +287,12 @@ class Viewport extends Coercible {
                     in: 'header',
                     schema: { type: 'string' }
                 },
+                'X-Detach-Invisibles': {
+                    description: 'Temporarily detach elements with computed `display:none` before snapshotting, then restore them.\n\n' +
+                        'Requires the browser engine and disables caching.',
+                    in: 'header',
+                    schema: { type: 'string' }
+                },
                 'X-Markdown-Chunking': {
                     description: `Opt-in markdown chunking.\n\nSupported values: \n${Object.values(CHUNKING_STRATEGY).map(x => `- ${x}`).join('\n')}\n\nNote if you are expecting text return, the chunking is done by injecting character \\u001D\n\n`,
                     in: 'header',
@@ -375,9 +381,9 @@ export class CrawlerOptions extends Coercible {
     respondWith!: string;
 
     @Prop({
-        default: false,
+        type: PseudoBoolean,
     })
-    withGeneratedAlt!: boolean;
+    withGeneratedAlt?: boolean;
 
     @Prop({ default: 'all', type: IMAGE_RETENTION_MODE_VALUES })
     retainImages?: typeof IMAGE_RETENTION_MODES[number];
@@ -386,29 +392,34 @@ export class CrawlerOptions extends Coercible {
     retainLinks?: typeof LINK_RETENTION_MODES[number];
 
     @Prop({
-        default: false,
+        type: [PseudoBoolean, String],
     })
-    withLinksSummary!: boolean | string;
+    withLinksSummary?: boolean | string;
 
     @Prop({
-        default: false,
+        type: PseudoBooleanLoose,
     })
-    withImagesSummary!: boolean;
+    withImagesSummary?: boolean;
 
     @Prop({
-        default: false,
+        type: PseudoBooleanLoose,
     })
-    noCache!: boolean;
+    noCache?: boolean;
 
     @Prop({
-        default: false,
+        type: PseudoBooleanLoose,
     })
-    removeOverlay!: boolean;
+    removeOverlay?: boolean;
 
     @Prop({
-        default: false,
+        type: PseudoBooleanLoose,
     })
-    noGfm!: string | boolean;
+    detachInvisibles?: boolean;
+
+    @Prop({
+        type: [PseudoBoolean, String],
+    })
+    noGfm?: string | boolean;
 
     @Prop()
     cacheTolerance?: number;
@@ -423,20 +434,19 @@ export class CrawlerOptions extends Coercible {
     removeSelector?: string | string[];
 
     @Prop({
-        default: false,
+        type: PseudoBooleanLoose,
     })
-    keepImgDataUrl!: boolean;
+    keepImgDataUrl?: boolean;
 
     @Prop({
-        default: false,
         type: [PseudoBoolean, String],
     })
-    withIframe!: boolean | 'quoted';
+    withIframe?: boolean | 'quoted';
 
     @Prop({
-        default: false,
+        type: PseudoBooleanLoose
     })
-    withShadowDom!: boolean;
+    withShadowDom?: boolean;
 
     @Prop({
         arrayOf: [Object, String],
@@ -623,6 +633,11 @@ export class CrawlerOptions extends Coercible {
         const removeOverlay = ctx?.get('x-remove-overlay')?.toLowerCase();
         if (removeOverlay) {
             instance.removeOverlay = ['no', 'none', 'false']?.includes(removeOverlay) ? false : true;
+        }
+
+        const detachInvisibles = ctx?.get('x-detach-invisibles')?.toLowerCase();
+        if (detachInvisibles) {
+            instance.detachInvisibles ??= ['no', 'none', 'false'].includes(detachInvisibles) ? false : true;
         }
 
         const engine = ctx?.get('x-engine');
@@ -815,6 +830,9 @@ export class CrawlerOptions extends Coercible {
         if (this.removeOverlay) {
             return false;
         }
+        if (this.detachInvisibles) {
+            return false;
+        }
 
         return true;
     }
@@ -846,6 +864,9 @@ export class CrawlerOptions extends Coercible {
             return false;
         }
         if (this.html) {
+            return false;
+        }
+        if (this.detachInvisibles) {
             return false;
         }
 

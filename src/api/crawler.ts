@@ -327,7 +327,7 @@ export class CrawlerHost extends RPCHost {
             reportUsage?.(chargeAmount, 'reader-crawl');
         });
 
-        if (isAnonymous) {
+        if (isAnonymous && !auth.isInternal) {
             // Enforce no proxy is allocated for anonymous users due to abuse.
             crawlerOptions.proxy = 'none';
             if (crawlerOptions.respondWith.includes('html')) {
@@ -1435,9 +1435,10 @@ export class CrawlerHost extends RPCHost {
             engine: opts.engine,
             allocProxy: opts.proxy?.endsWith('+') ? opts.proxy.slice(0, -1) : opts.proxy,
             proxyResources: (opts.proxyUrl || opts.proxy?.endsWith('+')) ? true : false,
-            private: Boolean(opts.doNotTrack),
+            private: Boolean(opts.doNotTrack || opts.detachInvisibles),
             readabilityRequired: opts.readabilityRequired(),
             extraHeaders: opts.customHeader,
+            detachInvisibles: opts.detachInvisibles,
         };
 
         if (crawlOpts.targetSelector?.length) {
