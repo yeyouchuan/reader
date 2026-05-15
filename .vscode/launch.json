@@ -6,10 +6,8 @@
       "request": "launch",
       "runtimeVersion": "24",
       "runtimeArgs": [
-        "--env-file=.secret.local",
       ],
       "env": {
-        "GCLOUD_PROJECT": "reader-6b7dc",
       },
       "cwd": "${workspaceFolder}",
       "program": "build/stand-alone/crawl.js",
@@ -26,10 +24,8 @@
       "request": "launch",
       "runtimeVersion": "24",
       "runtimeArgs": [
-        "--env-file=.secret.local",
       ],
       "env": {
-        "GCLOUD_PROJECT": "reader-6b7dc",
         "DEBUG_BROWSER": "true"
       },
       "cwd": "${workspaceFolder}",
@@ -47,7 +43,6 @@
       "request": "launch",
       "runtimeVersion": "24",
       "runtimeArgs": [
-        "--env-file=.secret.local",
       ],
       "env": {
         "GCLOUD_PROJECT": "reader-6b7dc",
@@ -69,11 +64,10 @@
       "request": "launch",
       "runtimeVersion": "24",
       "runtimeArgs": [
-        "--env-file=.secret.local",
       ],
       "env": {
-        "GCLOUD_PROJECT": "reader-6b7dc",
-        "PREFERRED_PROXY_COUNTRY": "us",
+        // "GCLOUD_PROJECT": "reader-6b7dc",
+        // "PREFERRED_PROXY_COUNTRY": "us",
         // "JINA_CRAWLER_OFFLOAD_ORIGIN": "https://r.jina.ai"
       },
       "cwd": "${workspaceFolder}",
@@ -91,12 +85,11 @@
       "request": "launch",
       "runtimeVersion": "24",
       "runtimeArgs": [
-        "--env-file=.secret.local",
       ],
       "env": {
-        "GCLOUD_PROJECT": "reader-6b7dc",
-        "PREFERRED_PROXY_COUNTRY": "us",
-        "JINA_CRAWLER_OFFLOAD_ORIGIN": "https://r.jina.ai"
+        // "GCLOUD_PROJECT": "reader-6b7dc",
+        // "PREFERRED_PROXY_COUNTRY": "us",
+        // "JINA_CRAWLER_OFFLOAD_ORIGIN": "https://r.jina.ai"
       },
       "cwd": "${workspaceFolder}",
       "program": "build/stand-alone/search.js",
@@ -113,12 +106,11 @@
       "request": "launch",
       "runtimeVersion": "24",
       "runtimeArgs": [
-        "--env-file=.secret.local",
       ],
       "env": {
         "GCLOUD_PROJECT": "reader-6b7dc",
         // "OVERRIDE_GOOGLE_DOMAIN": "www.google.com.hk",
-        "PREFERRED_PROXY_COUNTRY": "us"
+        // "PREFERRED_PROXY_COUNTRY": "us"
       },
       "cwd": "${workspaceFolder}",
       "program": "build/stand-alone/serp.js",
