@@ -568,6 +568,10 @@ export class CrawlerHost extends RPCHost {
             }
         }
 
+        if (crawlerOptions.respondWith?.includes('frontmatter')) {
+            return assignTransferProtocolMeta(`${formatted.frontmatterRepresentation}`, { contentType: 'text/markdown; charset=utf-8', envelope: null, headers: { ...headerMixin } });
+        }
+
         return assignTransferProtocolMeta(`${formatted.textRepresentation}`, { contentType: 'text/plain; charset=utf-8', envelope: null, headers: { ...headerMixin } });
     }
 
@@ -1393,6 +1397,7 @@ export class CrawlerHost extends RPCHost {
         this.threadLocal.set('retainImages', opts.retainImages);
         this.threadLocal.set('retainMedia', opts.retainMedia);
         this.threadLocal.set('retainLinks', opts.retainLinks);
+        this.threadLocal.set('frontMatter', opts.respondWith?.toLowerCase().includes('frontmatter'));
         this.threadLocal.set('noGfm', opts.noGfm);
         this.threadLocal.set('DNT', Boolean(opts.doNotTrack));
         if (opts.maxTokens) {

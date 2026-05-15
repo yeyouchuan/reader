@@ -51,6 +51,7 @@ export interface FormattedPage {
     };
 
     textRepresentation?: string;
+    frontmatterRepresentation?: string;
     metadata?: { [k: string]: string; };
     external?: { [rel: string]: { [href: string]: { [k: string]: string; }; }; };
     numPages?: number;
@@ -179,6 +180,57 @@ ${mixins.length ? `\n${mixins.join('\n\n')}\n` : ''}
 Markdown Content:
 ${this.content}
 ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
+    }
+
+    get frontmatterRepresentation() {
+        const fields: [string, string | undefined][] = [
+            ['title', this.title || undefined],
+            ['description', this.description || undefined],
+            ['url', this.url],
+            ['publishedTime', this.publishedTime],
+        ];
+
+        const frontmatterLines = ['---'];
+        for (const [key, value] of fields) {
+            if (!value) {
+                continue;
+            }
+            frontmatterLines.push(`${key}: ${JSON.stringify(value)}`);
+        }
+        if (this.warning) {
+            frontmatterLines.push(`warning: ${JSON.stringify(this.warning)}`);
+        }
+        frontmatterLines.push('---');
+
+        const suffixMixins = [];
+        if (this.images) {
+            const imageSummaryChunks = ['## Images'];
+            for (const [k, v] of Object.entries(this.images)) {
+                imageSummaryChunks.push(`- ![${k}](${v})`);
+            }
+            if (imageSummaryChunks.length === 1) {
+                imageSummaryChunks.push('This page does not seem to contain any images.');
+            }
+            suffixMixins.push(imageSummaryChunks.join('\n'));
+        }
+        if (this.links) {
+            const linkSummaryChunks = ['## Links/Buttons'];
+            if (Array.isArray(this.links)) {
+                for (const [k, v] of this.links) {
+                    linkSummaryChunks.push(`- [${k}](${v})`);
+                }
+            } else {
+                for (const [k, v] of Object.entries(this.links)) {
+                    linkSummaryChunks.push(`- [${k}](${v})`);
+                }
+            }
+            if (linkSummaryChunks.length === 1) {
+                linkSummaryChunks.push('This page does not seem to contain any buttons/links.');
+            }
+            suffixMixins.push(linkSummaryChunks.join('\n'));
+        }
+
+        return `${frontmatterLines.join('\n')}\n\n${this.content || ''}${suffixMixins.length ? `\n\n${suffixMixins.join('\n\n')}\n` : ''}`;
     }
 }
 
@@ -671,7 +723,8 @@ export class SnapshotFormatter extends AsyncService {
                 customRules,
                 customKeep: noGFMOpts === 'table' ? 'table' : undefined,
                 imgDataUrlToObjectUrl,
-                gfm: (noGFMOpts === 'table' || !noGFMOpts) ? true : false
+                gfm: (noGFMOpts === 'table' || !noGFMOpts) ? true : false,
+                omitHead: this.threadLocal.get('frontMatter') || false,
             } as const;
 
 
@@ -974,6 +1027,7 @@ export class SnapshotFormatter extends AsyncService {
         customRules?: { [k: string]: MarkifyRule; };
         customKeep?: string;
         gfm?: boolean;
+        omitHead?: boolean;
     }) {
         const turndownOpts = this.threadLocal.get('turndownOpts');
         const markifyService = new MarkifyService({
@@ -1006,6 +1060,12 @@ export class SnapshotFormatter extends AsyncService {
                     turndownOpts?.headingStyle === 'setext' ?
                         (innerText: string) => innerText ? `${innerText.trim()}\n===============\n` : '' :
                         (innerText: string) => innerText ? `# ${innerText.trim()}\n` : ''
+            });
+        }
+        if (options?.omitHead) {
+            markifyService.addRule('omit-head', {
+                filter: 'head',
+                replacement: () => ''
             });
         }
 

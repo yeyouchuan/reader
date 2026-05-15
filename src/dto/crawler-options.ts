@@ -16,6 +16,7 @@ export enum CONTENT_FORMAT {
     SCREENSHOT = 'screenshot',
     VLM = 'vlm',
     READER_LM = 'readerlm-v2',
+    FRONTMATTER = 'frontmatter',
 }
 
 export enum ENGINE_TYPE {
@@ -113,6 +114,7 @@ class Viewport extends Coercible {
                         `- pageshot\n` +
                         `- screenshot\n` +
                         `- content\n` +
+                        `- frontmatter\n` +
                         `- any combination of the above\n` +
                         `- readerlm-v2\n` +
                         `- vlm\n\n` +
@@ -858,7 +860,13 @@ export class CrawlerOptions extends Coercible {
     }
 
     isRequestingCompoundContentFormat() {
-        return !CONTENT_FORMAT_VALUES.has(this.respondWith);
+        if (CONTENT_FORMAT_VALUES.has(this.respondWith)) {
+            return false;
+        }
+
+        const respondWith = (this.respondWith || '').replaceAll(/[+, ]?frontmatter[+, ]?/ig, '');
+
+        return !CONTENT_FORMAT_VALUES.has(respondWith);
     }
 
     browserIsNotRequired() {
