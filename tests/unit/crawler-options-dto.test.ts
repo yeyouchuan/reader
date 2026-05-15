@@ -248,6 +248,41 @@ describe('CrawlerOptions.from() header parsing', () => {
         assert.strictEqual(opts.retainLinks, 'text');
     });
 
+    it('retainMedia defaults to link when header is absent', () => {
+        const opts = fromWithHeaders({});
+        assert.strictEqual(opts.retainMedia, 'link');
+    });
+
+    it('parses X-Retain-Media: none', () => {
+        const opts = fromWithHeaders({ 'x-retain-media': 'none' });
+        assert.strictEqual(opts.retainMedia, 'none');
+    });
+
+    it('parses X-Retain-Media: text', () => {
+        const opts = fromWithHeaders({ 'x-retain-media': 'text' });
+        assert.strictEqual(opts.retainMedia, 'text');
+    });
+
+    it('parses X-Retain-Media: link', () => {
+        const opts = fromWithHeaders({ 'x-retain-media': 'link' });
+        assert.strictEqual(opts.retainMedia, 'link');
+    });
+
+    it('parses X-Retain-Media: image', () => {
+        const opts = fromWithHeaders({ 'x-retain-media': 'image' });
+        assert.strictEqual(opts.retainMedia, 'image');
+    });
+
+    it('parses X-Retain-Media: html', () => {
+        const opts = fromWithHeaders({ 'x-retain-media': 'html' });
+        assert.strictEqual(opts.retainMedia, 'html');
+    });
+
+    it('ignores an invalid X-Retain-Media value and keeps the default', () => {
+        const opts = fromWithHeaders({ 'x-retain-media': 'bogus' });
+        assert.strictEqual(opts.retainMedia, 'link');
+    });
+
     it('parses X-No-Cache header', () => {
         const opts = fromWithHeaders({ 'x-no-cache': '1' });
         assert.strictEqual(opts.noCache, true);

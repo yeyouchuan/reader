@@ -1391,6 +1391,7 @@ export class CrawlerHost extends RPCHost {
             this.threadLocal.set('timeout', opts.timeout * 1000);
         }
         this.threadLocal.set('retainImages', opts.retainImages);
+        this.threadLocal.set('retainMedia', opts.retainMedia);
         this.threadLocal.set('retainLinks', opts.retainLinks);
         this.threadLocal.set('noGfm', opts.noGfm);
         this.threadLocal.set('DNT', Boolean(opts.doNotTrack));

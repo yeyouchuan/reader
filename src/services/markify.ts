@@ -19,7 +19,7 @@ export interface MarkifyOptions {
 
 export interface Replacer {
     name: string;
-    replacement: (this: MarkifyService, content: string, node: Element, options?: MarkifyOptions) => string;
+    replacement: (this: MarkifyService, content: string, node: Element, options?: MarkifyOptions, instance?: MarkifyService) => string;
 }
 
 export interface MarkifyRule {
@@ -268,7 +268,7 @@ export class MarkifyService {
     ): string {
         let replacedText = text;
         for (const replacer of replacers) {
-            replacedText = replacer.replacement.call(this, replacedText, element, this.options);
+            replacedText = replacer.replacement.call(this, replacedText, element, this.options, this);
         }
         return replacedText;
     }

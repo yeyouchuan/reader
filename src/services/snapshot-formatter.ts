@@ -238,6 +238,18 @@ function resolveEmbeddedVideoUrl(rawSrc: string): string | undefined {
     return undefined;
 }
 
+const STRIP_ATTRS = new Set(['class', 'id', 'style']);
+function stripIrrelevantAttrs(el: HTMLElement): void {
+    for (const name of [...el.getAttributeNames()]) {
+        if (STRIP_ATTRS.has(name) || name.startsWith('data-') || name.startsWith('aria-')) {
+            el.removeAttribute(name);
+        }
+    }
+    for (const child of el.children) {
+        stripIrrelevantAttrs(child as HTMLElement);
+    }
+}
+
 @singleton()
 export class SnapshotFormatter extends AsyncService {
 
@@ -389,6 +401,7 @@ export class SnapshotFormatter extends AsyncService {
 
             const noGFMOpts = this.threadLocal.get('noGfm');
             const imageRetention = this.threadLocal.get('retainImages') as CrawlerOptions['retainImages'];
+            const mediaRetention = this.threadLocal.get('retainMedia') as CrawlerOptions['retainMedia'];
             let imgIdx = 0;
             let videoIdx = 0;
             let audioIdx = 0;
@@ -471,16 +484,12 @@ export class SnapshotFormatter extends AsyncService {
 
                 'media-retention': {
                     filter: ['video', 'audio'],
-                    replacement: (_content: string, node: HTMLElement) => {
-                        if (imageRetention === 'none') {
+                    replacement: (_content: string, node: HTMLElement, options, instance) => {
+                        if (!mediaRetention || mediaRetention === 'none') {
                             return '';
                         }
 
                         const isVideo = node.tagName.toLowerCase() === 'video';
-
-                        if (imageRetention === 'alt') {
-                            return isVideo ? `(Video ${++videoIdx})` : `(Audio ${++audioIdx})`;
-                        }
                         const sourceNode = node.querySelector('source[src], source[srcset], source[data-src]') || node;
                         const originalSrc = (sourceNode?.getAttribute('src') || '').trim();
                         let linkPreferredSrc = originalSrc;
@@ -507,31 +516,98 @@ export class SnapshotFormatter extends AsyncService {
                             return '';
                         }
 
-                        const blobUrl = (linkPreferredSrc.startsWith('data:') ? this.dataUrlToBlobUrl(linkPreferredSrc, snapshot.rebase) : src).trim();
-                        const idx = isVideo ? ++videoIdx : ++audioIdx;
-                        const label = isVideo ? 'Video' : 'Audio';
+                        const effectiveSrc = (linkPreferredSrc.startsWith('data:')
+                            ? this.dataUrlToBlobUrl(linkPreferredSrc, snapshot.rebase)
+                            : src
+                        ).trim();
 
-                        return imgDataUrlToObjectUrl ? `![${label} ${idx}](${blobUrl})` : `![${label} ${idx}](${src})`;
+                        const idx = isVideo ? ++videoIdx : ++audioIdx;
+                        const mediaLabel = isVideo ? 'Video' : 'Audio';
+                        const labelText = `${mediaLabel} ${idx}`;
+
+                        if (mediaRetention === 'text') {
+                            return labelText;
+                        }
+
+                        if (mediaRetention === 'html') {
+                            const clone = node.cloneNode(true) as HTMLElement;
+                            for (const el of [clone, ...Array.from(clone.querySelectorAll('*'))]) {
+                                for (const attr of ['src', 'srcset']) {
+                                    const val = (el as HTMLElement).getAttribute(attr) || '';
+                                    if (val.startsWith('data:')) {
+                                        (el as HTMLElement).setAttribute(attr, this.dataUrlToBlobUrl(val, snapshot.rebase));
+                                    }
+                                }
+                            }
+                            stripIrrelevantAttrs(clone);
+                            return clone.outerHTML;
+                        }
+
+                        if (mediaRetention === 'link') {
+                            const linkStyle = options?.linkStyle || 'inlined';
+                            if (linkStyle === 'discarded') {
+                                return labelText;
+                            }
+                            if (linkStyle === 'referenced') {
+                                const linkRef = instance!.links.length + 1;
+                                let domain = '';
+                                try { domain = new URL(effectiveSrc).hostname; } catch { void 0; }
+                                instance!.links.push({ href: effectiveSrc, text: labelText, title: '', ref: linkRef, domain });
+                                switch (options?.linkReferenceStyle) {
+                                    case 'collapsed': return `[${labelText}][]`;
+                                    case 'shortcut': return `[${labelText}]`;
+                                    default: return `[${labelText}][${linkRef}]`;
+                                }
+                            }
+                            return `[${labelText}](${effectiveSrc})`;
+                        }
+
+                        return `![${labelText}](${effectiveSrc})`;
                     }
                 } as MarkifyRule,
 
                 'embedded-video-iframe': {
                     filter: 'iframe',
-                    replacement: (content: string, node: HTMLElement) => {
+                    replacement: (content: string, node: HTMLElement, options, instance) => {
                         // src is standard; href is used by a few embed widgets as
                         // a parallel canonical pointer to the playable video.
                         const rawSrc = (node.getAttribute('src') || node.getAttribute('href') || '').trim();
                         let videoMd = '';
-                        if (rawSrc) {
+                        if (rawSrc && mediaRetention && mediaRetention !== 'none') {
                             let absoluteSrc = rawSrc;
                             if (rebase) {
                                 try { absoluteSrc = new URL(rawSrc, rebase).toString(); } catch { /* keep raw */ }
                             }
                             const resolved = resolveEmbeddedVideoUrl(absoluteSrc);
-                            if (resolved && imageRetention !== 'none') {
-                                videoMd = imageRetention === 'alt'
-                                    ? `(Video ${++videoIdx})`
-                                    : `![Video ${++videoIdx}](${resolved})`;
+                            if (resolved) {
+                                if (mediaRetention === 'text') {
+                                    videoMd = `Video ${++videoIdx}`;
+                                } else if (mediaRetention === 'html') {
+                                    const clone = node.cloneNode(false) as HTMLElement;
+                                    clone.setAttribute('src', absoluteSrc);
+                                    stripIrrelevantAttrs(clone);
+                                    videoMd = clone.outerHTML;
+                                    ++videoIdx;
+                                } else if (mediaRetention === 'link') {
+                                    const labelText = `Video ${++videoIdx}`;
+                                    const linkStyle = options?.linkStyle || 'inlined';
+                                    videoMd = `[${labelText}](${resolved})`;
+                                    if (linkStyle === 'discarded') {
+                                        videoMd = labelText;
+                                    } else if (linkStyle === 'referenced') {
+                                        const linkRef = instance!.links.length + 1;
+                                        let domain = '';
+                                        try { domain = new URL(resolved).hostname; } catch { void 0; }
+                                        instance!.links.push({ href: resolved, text: labelText, title: '', ref: linkRef, domain });
+                                        if (options?.linkReferenceStyle === 'collapsed') {
+                                            videoMd = `[${labelText}][]`;
+                                        } else if (options?.linkReferenceStyle === 'shortcut') {
+                                            videoMd = `[${labelText}]`;
+                                        }
+                                    }
+                                } else {
+                                    videoMd = `![Video ${++videoIdx}](${resolved})`;
+                                }
                             }
                         }
 

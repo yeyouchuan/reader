@@ -56,6 +56,8 @@ export const IMAGE_RETENTION_MODES = ['none', 'all', 'alt', 'all_p', 'alt_p'] as
 const IMAGE_RETENTION_MODE_VALUES = new Set<string>(IMAGE_RETENTION_MODES);
 export const LINK_RETENTION_MODES = ['none', 'all', 'text', 'gpt-oss'] as const;
 const LINK_RETENTION_MODE_VALUES = new Set<string>(LINK_RETENTION_MODES);
+export const MEDIA_RETENTION_MODES = ['none', 'text', 'link', 'image', 'html'] as const;
+const MEDIA_RETENTION_MODE_VALUES = new Set<string>(MEDIA_RETENTION_MODES);
 export const BASE_URL_MODES = ['initial', 'final'] as const;
 const BASE_URL_MODE_VALUES = new Set<string>(BASE_URL_MODES);
 
@@ -213,6 +215,17 @@ class Viewport extends Coercible {
                         `- alt: only alt text\n` +
                         `- all_p: all images and with generated alt text\n` +
                         `- alt_p: only alt text and with generated alt\n\n`,
+                    in: 'header',
+                    schema: { type: 'string' }
+                },
+                'X-Retain-Media': {
+                    description: `Media retention modes for video, audio, and embedded video iframes.\n\n` +
+                        `Supported modes: \n` +
+                        `- none: no media\n` +
+                        `- text: plain label, e.g. \`Video 1\`\n` +
+                        `- link: markdown link, e.g. \`[Video 1](url)\` (default)\n` +
+                        `- image: markdown image syntax, e.g. \`![Video 1](url)\`\n` +
+                        `- html: original HTML with irrelevant attributes (class, id, style, data-*, aria-*) stripped\n\n`,
                     in: 'header',
                     schema: { type: 'string' }
                 },
@@ -387,6 +400,9 @@ export class CrawlerOptions extends Coercible {
 
     @Prop({ default: 'all', type: IMAGE_RETENTION_MODE_VALUES })
     retainImages?: typeof IMAGE_RETENTION_MODES[number];
+
+    @Prop({ default: 'link', type: MEDIA_RETENTION_MODE_VALUES })
+    retainMedia?: typeof MEDIA_RETENTION_MODES[number];
 
     @Prop({ default: 'all', type: LINK_RETENTION_MODE_VALUES })
     retainLinks?: typeof LINK_RETENTION_MODES[number];
@@ -589,6 +605,10 @@ export class CrawlerOptions extends Coercible {
         }
         if (instance.withGeneratedAlt) {
             instance.retainImages = 'all_p';
+        }
+        const retainMedia = ctx?.get('x-retain-media');
+        if (retainMedia && MEDIA_RETENTION_MODE_VALUES.has(retainMedia)) {
+            instance.retainMedia = retainMedia as any;
         }
         const retainLinks = ctx?.get('x-retain-links');
         if (retainLinks && LINK_RETENTION_MODE_VALUES.has(retainLinks)) {
