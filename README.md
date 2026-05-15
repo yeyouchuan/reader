@@ -102,10 +102,17 @@ You can control the behavior of the Reader API using request headers. The list b
   - `none` — drop links entirely.
   - `text` — keep link anchor text only, drop URLs. Best for embedding / semantic-index pipelines where URLs are noise.
   - `gpt-oss` — emit citations in gpt-oss's `【{id}†...】` format and append a numbered URL footer (also auto-enables `x-with-links-summary`).
+- `x-retain-media` — control how `<video>`, `<audio>`, and embedded video iframes (`<iframe>` from YouTube, Vimeo, Bilibili, etc.) appear in the output:
+  - `link` (default) — markdown link, e.g. `[Video 1](url)`. Embedded iframes are rewritten to their canonical watch URL. Respects `x-md-link-style`.
+  - `none` — drop media entirely; non-video iframes fall back to their inner text content.
+  - `text` — bare label only, e.g. `Video 1` or `Audio 1`. No URL.
+  - `image` — markdown image syntax, e.g. `![Video 1](url)`.
+  - `html` — the original HTML element with cosmetic attributes (`class`, `id`, `style`, `data-*`, `aria-*`) stripped. Embedded video iframes keep their original embed `src` rather than the canonical watch URL.
 - `x-with-links-summary` / `x-with-images-summary` — append a deduplicated footer of all links / images to the output. Combine with `x-retain-links: text` or `x-retain-images: alt` to get inline anchor/alt text plus *one* canonical URL list at the end — convenient when you want the model to see URLs without paying for them inline. `x-with-links-summary: all` keeps every link instead of only the unique ones.
 - `x-markdown-chunking` — opt-in semantic chunking of the markdown response. Returns a JSON array (or ``-delimited text) of chunks instead of one blob:
   - `true` / `h1` … `h5` — heading-based split at the given heading level (e.g. `h3` chunks at `#`, `##`, and `###`).
   - `structured` / `s1` … `s5` — block-level structured split. `s1` is coarsest, `s5` finest.
+- `x-detach-invisibles` — temporarily detach elements with `display:none` before snapshotting, then restore them. Removes hidden overlays and cookie banners that obscure readable content. Requires the browser engine; disables caching.
 - `x-set-cookie` — forward cookie settings. Requests with cookies are not cached.
 - `x-md-*` — fine-tune markdown output (heading style, bullet markers, link style, etc.). See [src/dto/turndown-tweakable-options.ts](./src/dto/turndown-tweakable-options.ts).
 
