@@ -68,13 +68,13 @@ We highly recommend using the code builder to explore different parameter combin
 
 You can control the behavior of the Reader API using request headers. The list below covers the most useful ones — for the full surface with up-to-date defaults and validation rules, see the live API docs at [https://r.jina.ai/docs](https://r.jina.ai/docs), or the source of truth in [`src/dto/crawler-options.ts`](./src/dto/crawler-options.ts).
 
-- `x-respond-with` — bypass `readability` filtering:
+- `x-respond-with` — select the output format.
   - `markdown` returns markdown *without* going through `readability`
   - `html` returns `documentElement.outerHTML`
   - `text` returns `document.body.innerText`
   - `screenshot` returns the URL of the webpage's screenshot
   - `pageshot` similar to `screenshot` but tries to capture the whole page instead of just the viewport
-  - `frontmatter` / `markdown+frontmatter` returns **Markdown with a YAML frontmatter block**. The default plain-text response uses a custom `Title: …` / `URL Source: …` header format; `frontmatter` replaces that with a front matter block. Example:
+  - `frontmatter` returns **Markdown with a YAML frontmatter block**. The default plain-text response uses a custom `Title: …` / `URL Source: …` header format; `frontmatter` replaces that with a front matter block. Example:
 
     ```bash
     curl -H 'X-Respond-With: frontmatter' 'https://r.jina.ai/https://example.com'
@@ -91,6 +91,8 @@ You can control the behavior of the Reader API using request headers. The list b
 
     This domain is for use in illustrative examples in documents. ...
     ```
+
+  - `markdown+frontmatter` — like `frontmatter` but covers the full page without readability filtering.
 - `x-engine` — enforces a fetching engine: `browser` (headless Chrome), `curl` (lightweight, no JS), or `auto` (the default — Combined use of both browser and curl).
 - `x-proxy-url` — route the traffic through your designated proxy.
 - `x-cache-tolerance` — integer seconds; how stale a cached page is acceptable.
@@ -129,13 +131,13 @@ You can control the behavior of the Reader API using request headers. The list b
 - `x-markdown-chunking` — opt-in semantic chunking of the markdown response. Returns a JSON array (or ``-delimited text) of chunks instead of one blob:
   - `true` / `h1` … `h5` — heading-based split at the given heading level (e.g. `h3` chunks at `#`, `##`, and `###`).
   - `structured` / `s1` … `s5` — block-level structured split. `s1` is coarsest, `s5` finest.
-- `x-preset` — apply a pre-packaged option bundle for common scenarios. Preset values only take effect for options the caller does *not* set explicitly (via body or another header).
-  - `reader` — for display to human users.
+- `x-preset` — apply a pre-packaged option bundle for common scenarios. Preset values only take effect for options the caller does *not* set explicitly (via body or another header). See [cookbooks.md](./cookbooks.md#using-presets) for examples.
+  - `reader` — for displaying content to human users.
   - `index` — for semantic indexing / embedding pipelines.
-  - `research` — for academic / research AI agents.
-  - `agent` — for day-to-day AI agents.
-  - `spider` — for recursive site crawling.
-- `x-detach-invisibles` — temporarily detach elements with `display:none` before snapshotting, then restore them. Removes hidden overlays and cookie banners that obscure readable content. Requires the browser engine; disables caching.
+  - `research` — for AI research agents needing structured, citable output.
+  - `agent` — for AI agents doing everyday browsing tasks.
+  - `spider` — for recursive site crawling with a full link inventory.
+- `x-detach-invisibles` — detach elements with eventual `display:none` before snapshotting. Implies browser engine; disables caching.
 - `x-set-cookie` — forward cookie settings. Requests with cookies are not cached.
 - `x-md-*` — fine-tune markdown output (heading style, bullet markers, link style, etc.). See [src/dto/turndown-tweakable-options.ts](./src/dto/turndown-tweakable-options.ts).
 

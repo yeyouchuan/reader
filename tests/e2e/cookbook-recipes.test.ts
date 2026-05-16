@@ -305,7 +305,56 @@ describe('cookbook: geo and locale', () => {
     });
 });
 
-// --- Recipe 9: Raw HTML upload ---
+// --- Recipe 9: Presets ---
+describe('cookbook: x-preset shortcuts', () => {
+    it('preset=index drops link URLs and adds s3 chunking', async () => {
+        const res = await crawlWithHeaders({ 'X-Preset': 'index' });
+        assert.strictEqual(res.status, 200);
+        const content = getContent(res);
+        // retainLinks: text — anchor text kept, URL dropped
+        assert.ok(content.includes('link to crawling docs'), 'anchor text should be present');
+        assert.doesNotMatch(content, /https:\/\/example\.com\/crawling/, 'link URL should be dropped');
+        // markdownChunking: s3 — chunks present
+        assert.ok(Array.isArray(res.body.data.chunks), 'chunks array should be present');
+        assert.ok(res.body.data.chunks.length > 1, 'should have multiple chunks');
+    });
+
+    it('preset=research keeps links with URLs and produces h3 chunks', async () => {
+        const res = await crawlWithHeaders({ 'X-Preset': 'research' });
+        assert.strictEqual(res.status, 200);
+        const content = getContent(res);
+        // retainLinks: all — full link markdown present
+        assert.match(content, /\[link to crawling docs\]\(https:\/\/example\.com\/crawling\)/);
+        // markdownChunking: h3 — chunks present
+        assert.ok(Array.isArray(res.body.data.chunks), 'chunks array should be present');
+    });
+
+    it('preset=spider collects full link inventory in links summary', async () => {
+        const res = await crawlWithHeaders({ 'X-Preset': 'spider' });
+        assert.strictEqual(res.status, 200);
+        // withLinksSummary: all — links footer populated
+        const hrefs = Object.values(res.body.data.links as Record<string, string>);
+        assert.ok(hrefs.length > 0, 'spider preset should populate link summary');
+        assert.ok(
+            hrefs.some((h) => h === 'https://example.com/crawling'),
+            `Expected crawling URL in links footer, got: ${hrefs.join(', ')}`,
+        );
+    });
+
+    it('explicit header overrides the preset', async () => {
+        // preset=index drops link URLs via retainLinks: text
+        // explicit X-Retain-Links: all should override that
+        const res = await crawlWithHeaders({
+            'X-Preset': 'index',
+            'X-Retain-Links': 'all',
+        });
+        assert.strictEqual(res.status, 200);
+        const content = getContent(res);
+        assert.match(content, /\[link to crawling docs\]\(https:\/\/example\.com\/crawling\)/);
+    });
+});
+
+// --- Recipe 10: Raw HTML upload ---
 describe('cookbook: raw HTML upload', () => {
     it('POST with { html, url } returns extracted content', async () => {
         const res = await getAgent()

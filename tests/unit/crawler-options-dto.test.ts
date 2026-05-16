@@ -185,6 +185,14 @@ describe('CrawlerOptions.isRequestingCompoundContentFormat', () => {
     it('returns true for combined formats like markdown+html', () => {
         assert.strictEqual(makeOpts({ respondWith: 'markdown+html' }).isRequestingCompoundContentFormat(), true);
     });
+
+    it('returns false for content+frontmatter (frontmatter is transparent)', () => {
+        assert.strictEqual(makeOpts({ respondWith: 'content+frontmatter' }).isRequestingCompoundContentFormat(), false);
+    });
+
+    it('returns false for markdown+frontmatter (frontmatter is transparent)', () => {
+        assert.strictEqual(makeOpts({ respondWith: 'markdown+frontmatter' }).isRequestingCompoundContentFormat(), false);
+    });
 });
 
 // ── isSnapshotAcceptableForEarlyResponse ─────────────────────────────────────

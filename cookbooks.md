@@ -8,6 +8,7 @@ For the full list of headers and body fields these recipes pull from, see the [U
 
 - [Reader Cookbooks](#reader-cookbooks)
   - [Contents](#contents)
+  - [Using presets](#using-presets)
   - [RAG inference (the user will see what the LLM sees)](#rag-inference-the-user-will-see-what-the-llm-sees)
   - [Semantic indexing (build embeddings; URLs are noise)](#semantic-indexing-build-embeddings-urls-are-noise)
   - [Deep research (long-context model needs URLs, but only once)](#deep-research-long-context-model-needs-urls-but-only-once)
@@ -19,6 +20,29 @@ For the full list of headers and body fields these recipes pull from, see the [U
   - [PDF, MS Office, and raw HTML uploads](#pdf-ms-office-and-raw-html-uploads)
     - [PDF and Office files](#pdf-and-office-files)
     - [Raw HTML](#raw-html)
+
+## Using presets
+
+`x-preset` is a one-header shortcut that bundles the options from the manual recipes below. Preset values only kick in for options the caller hasn't set explicitly — you can always override a single field.
+
+| Preset | Best for | Key settings |
+|---|---|---|
+| `reader` | Displaying to humans | `respondWith: frontmatter`, `retainMedia: html`, `detachInvisibles`, `removeOverlay` |
+| `index` | Embedding / vector stores | `retainLinks: text`, `retainImages: alt`, `retainMedia: none`, `markdownChunking: s3` |
+| `research` | AI research agents | `respondWith: markdown+frontmatter`, `markdownChunking: h3`, all links/images/media |
+| `agent` | Day-to-day AI agents | `respondWith: frontmatter`, `markdownChunking: h3`, `retainImages: alt` |
+| `spider` | Recursive site crawling | `respondWith: markdown+frontmatter`, `markdownChunking: h3`, `withLinksSummary: all` |
+
+```bash
+# Semantic indexing with one header — equivalent to the manual recipe below
+curl https://r.jina.ai/https://example.com/article \
+  -H 'x-preset: index'
+
+# Override a single field (keep URLs even though the preset drops them)
+curl https://r.jina.ai/https://example.com/article \
+  -H 'x-preset: index' \
+  -H 'x-retain-links: all'
+```
 
 ## RAG inference (the user will see what the LLM sees)
 
@@ -46,6 +70,8 @@ Anchor text and alt text are kept (they carry meaning); URLs are dropped. JSON +
 
 If headings are sparse or unreliable, switch to the structured (`s1` … `s5`) family — block-level splits that don't depend on heading discipline. `s3` is a reasonable starting point; `s2` is coarser, `s4` / `s5` are finer.
 
+**Preset shortcut:** `x-preset: index` applies the same combination (with `s3` chunking).
+
 ## Deep research (long-context model needs URLs, but only once)
 
 Deep-research / agentic models cite URLs but choke if every link reference appears inline a dozen times. They also rarely need image URLs — captions are enough. Move the URLs into a single canonical footer and keep only anchor text inline.
@@ -58,6 +84,8 @@ curl https://r.jina.ai/https://example.com/article \
 ```
 
 The model reads the article with clean anchor text inline, then consults the deduplicated link footer when it needs to attribute or fetch a source. For gpt-oss-style citation tokens (`【1†...】`) instead of plain anchor text, swap `x-retain-links: text` for `x-retain-links: gpt-oss` — it auto-enables the summary footer for you.
+
+**Preset shortcut:** `x-preset: research` applies a similar setup (keeps all links inline with URLs and chunks at `h3`). Use `x-preset: spider` if you also want the full link inventory collected for further crawling.
 
 ## Visual snapshot / pageshot for multimodal reasoning
 
